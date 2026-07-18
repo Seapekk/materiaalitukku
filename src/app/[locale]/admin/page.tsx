@@ -2,48 +2,12 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Business, Tender } from "@/lib/types";
-import { moderateBusiness, moderateTender } from "./actions";
+import { getCountryFlag } from "@/lib/country";
+import type { Submission } from "@/lib/types";
+import { approveSubmission, rejectSubmission } from "./actions";
 
 export const metadata: Metadata = { title: "Admin" };
 export const dynamic = "force-dynamic";
-
-function ModerateButtons({
-  id,
-  action,
-  approveLabel,
-  rejectLabel,
-}: {
-  id: string;
-  action: (formData: FormData) => Promise<void>;
-  approveLabel: string;
-  rejectLabel: string;
-}) {
-  return (
-    <div className="flex gap-2 shrink-0">
-      <form action={action}>
-        <input type="hidden" name="id" value={id} />
-        <button
-          name="action"
-          value="approve"
-          className="bg-emerald-700 text-white rounded px-3 py-1.5 text-sm hover:bg-emerald-800 cursor-pointer"
-        >
-          {approveLabel}
-        </button>
-      </form>
-      <form action={action}>
-        <input type="hidden" name="id" value={id} />
-        <button
-          name="action"
-          value="reject"
-          className="bg-red-600 text-white rounded px-3 py-1.5 text-sm hover:bg-red-700 cursor-pointer"
-        >
-          {rejectLabel}
-        </button>
-      </form>
-    </div>
-  );
-}
 
 export default async function AdminPage() {
   const t = await getTranslations("admin");
@@ -68,94 +32,71 @@ export default async function AdminPage() {
     return null;
   }
 
-  const [{ data: pendingTenders }, { data: pendingBusinesses }] =
-    await Promise.all([
-      supabase
-        .from("tenders")
-        .select("*")
-        .eq("status", "pending")
-        .order("created_at"),
-      supabase
-        .from("businesses")
-        .select("*")
-        .eq("status", "pending")
-        .order("created_at"),
-    ]);
-
-  const nothingPending =
-    (!pendingTenders || pendingTenders.length === 0) &&
-    (!pendingBusinesses || pendingBusinesses.length === 0);
+  const { data: pending } = await supabase
+    .from("submissions")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at");
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">
-      <h1 className="text-3xl font-bold">{t("title")}</h1>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-2">{t("title")}</h1>
+      <p className="text-sm text-slate-500 mb-6">{t("approveNote")}</p>
 
-      {nothingPending && <p className="text-slate-500">{t("empty")}</p>}
-
-      {pendingTenders && pendingTenders.length > 0 && (
+      {pending && pending.length > 0 ? (
         <section>
-          <h2 className="text-xl font-semibold mb-3">{t("pendingTenders")}</h2>
-          <ul className="space-y-2">
-            {pendingTenders.map((tender: Tender) => (
-              <li
-                key={tender.id}
-                className="bg-white border border-slate-200 rounded-lg p-4"
-              >
+          <h2 className="text-xl font-semibold mb-3">
+            {t("pendingSubmissions")} ({pending.length})
+          </h2>
+          <ul className="space-y-3">
+            {pending.map((sub: Submission) => (
+              <li key={sub.id} className="bg-white border border-slate-200 rounded-lg p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium">{tender.title}</p>
+                    <p className="font-medium">{sub.raw_name}</p>
                     <p className="text-sm text-slate-500">
-                      {tender.city}, {tender.country}
-                      {tender.budget != null && <> · {tender.budget} €</>}
+                      {t("supplier")}: {getCountryFlag(sub.supplier_country)}{" "}
+                      {sub.supplier_name} ({sub.supplier_email})
+                    </p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {t("price")}: {sub.raw_unit_price.toFixed(2)} €/{sub.raw_unit}
+                      {sub.raw_wholesale_price != null && (
+                        <> · {sub.raw_wholesale_price.toFixed(2)} € ≥ {sub.raw_min_wholesale_qty ?? "?"}</>
+                      )}
+                      {sub.raw_transport_small != null && (
+                        <> · 🚚 {sub.raw_transport_small.toFixed(2)} €</>
+                      )}
+                      {sub.raw_transport_bulk != null && (
+                        <> / {sub.raw_transport_bulk.toFixed(2)} €</>
+                      )}
                     </p>
                   </div>
-                  <ModerateButtons
-                    id={tender.id}
-                    action={moderateTender}
-                    approveLabel={t("approve")}
-                    rejectLabel={t("reject")}
-                  />
+                  <div className="flex gap-2 shrink-0">
+                    <form action={approveSubmission}>
+                      <input type="hidden" name="id" value={sub.id} />
+                      <button className="bg-emerald-700 text-white rounded px-3 py-1.5 text-sm hover:bg-emerald-800 cursor-pointer">
+                        {t("approve")}
+                      </button>
+                    </form>
+                    <form action={rejectSubmission}>
+                      <input type="hidden" name="id" value={sub.id} />
+                      <button className="bg-red-600 text-white rounded px-3 py-1.5 text-sm hover:bg-red-700 cursor-pointer">
+                        {t("reject")}
+                      </button>
+                    </form>
+                  </div>
                 </div>
-                <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">
-                  {tender.description}
-                </p>
+                {sub.raw_description && (
+                  <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">
+                    {sub.raw_description}
+                  </p>
+                )}
               </li>
             ))}
           </ul>
         </section>
-      )}
-
-      {pendingBusinesses && pendingBusinesses.length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold mb-3">{t("pendingBusinesses")}</h2>
-          <ul className="space-y-2">
-            {pendingBusinesses.map((b: Business) => (
-              <li
-                key={b.id}
-                className="bg-white border border-slate-200 rounded-lg p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{b.name}</p>
-                    <p className="text-sm text-slate-500">
-                      {b.city}, {b.country}
-                      {b.email && <> · {b.email}</>}
-                    </p>
-                  </div>
-                  <ModerateButtons
-                    id={b.id}
-                    action={moderateBusiness}
-                    approveLabel={t("approve")}
-                    rejectLabel={t("reject")}
-                  />
-                </div>
-                <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">
-                  {b.description}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
+      ) : (
+        <p className="text-slate-500">{t("empty")}</p>
       )}
     </div>
   );

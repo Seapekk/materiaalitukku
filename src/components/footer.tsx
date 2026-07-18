@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 
 export async function Footer() {
   const t = await getTranslations("footer");
+  const tc = await getTranslations("common");
 
   return (
     <footer className="bg-white border-t border-slate-200 mt-12">
@@ -10,12 +11,16 @@ export async function Footer() {
         <p>
           © {new Date().getFullYear()} Materiaalitukku. {t("rights")}
         </p>
+        <p>{tc("vatNote")}</p>
         <nav className="flex gap-4">
-          <Link href="/tenders" className="hover:text-slate-800">
-            {t("tenders")}
+          <Link href="/products" className="hover:text-slate-800">
+            {t("products")}
           </Link>
-          <Link href="/businesses" className="hover:text-slate-800">
-            {t("businesses")}
+          <Link href="/suppliers" className="hover:text-slate-800">
+            {t("suppliers")}
+          </Link>
+          <Link href="/transport" className="hover:text-slate-800">
+            {t("transport")}
           </Link>
         </nav>
       </div>

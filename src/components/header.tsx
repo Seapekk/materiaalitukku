@@ -28,40 +28,32 @@ export async function Header() {
           Materiaalitukku
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2 text-sm">
-          <Link href="/tenders" className="px-2 sm:px-3 py-2 rounded hover:bg-slate-100">
-            {t("tenders")}
+          <Link href="/products" className="px-2 sm:px-3 py-2 rounded hover:bg-slate-100">
+            {t("products")}
           </Link>
-          <Link href="/businesses" className="px-2 sm:px-3 py-2 rounded hover:bg-slate-100">
-            {t("businesses")}
+          <Link href="/suppliers" className="hidden sm:block px-2 sm:px-3 py-2 rounded hover:bg-slate-100">
+            {t("suppliers")}
+          </Link>
+          <Link href="/transport" className="hidden sm:block px-2 sm:px-3 py-2 rounded hover:bg-slate-100">
+            {t("transport")}
+          </Link>
+          <Link
+            href="/submit"
+            className="px-3 py-2 rounded bg-emerald-700 text-white hover:bg-emerald-800"
+          >
+            {t("submit")}
           </Link>
           {isAdmin && (
             <Link href="/admin" className="px-2 sm:px-3 py-2 rounded hover:bg-slate-100">
               {t("admin")}
             </Link>
           )}
-          {user ? (
-            <>
-              <Link href="/dashboard" className="px-2 sm:px-3 py-2 rounded hover:bg-slate-100">
-                {t("dashboard")}
-              </Link>
-              <form action={logout}>
-                <button className="px-2 sm:px-3 py-2 rounded hover:bg-slate-100 cursor-pointer">
-                  {t("logout")}
-                </button>
-              </form>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="px-2 sm:px-3 py-2 rounded hover:bg-slate-100">
-                {t("login")}
-              </Link>
-              <Link
-                href="/tenders/new"
-                className="hidden sm:block px-3 py-2 rounded bg-emerald-700 text-white hover:bg-emerald-800"
-              >
-                {t("postTender")}
-              </Link>
-            </>
+          {user && (
+            <form action={logout}>
+              <button className="px-2 sm:px-3 py-2 rounded hover:bg-slate-100 cursor-pointer">
+                {t("logout")}
+              </button>
+            </form>
           )}
           <LanguageSwitcher />
         </nav>

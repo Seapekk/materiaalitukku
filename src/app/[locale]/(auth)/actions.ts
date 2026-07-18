@@ -5,7 +5,7 @@ import { getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export type AuthState = { error?: string; message?: string };
+export type AuthState = { error?: string };
 
 export async function login(
   _prev: AuthState,
@@ -24,29 +24,8 @@ export async function login(
   }
 
   revalidatePath("/", "layout");
-  redirect({ href: "/dashboard", locale });
+  redirect({ href: "/admin", locale });
   return {};
-}
-
-export async function register(
-  _prev: AuthState,
-  formData: FormData
-): Promise<AuthState> {
-  const supabase = await createClient();
-
-  const { error } = await supabase.auth.signUp({
-    email: String(formData.get("email") ?? ""),
-    password: String(formData.get("password") ?? ""),
-    options: {
-      data: { display_name: String(formData.get("displayName") ?? "") },
-    },
-  });
-
-  if (error) {
-    return { error: "genericError" };
-  }
-
-  return { message: "checkEmail" };
 }
 
 export async function logout() {

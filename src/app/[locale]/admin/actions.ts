@@ -19,22 +19,85 @@ async function requireAdmin() {
   return profile?.role === "admin" ? supabase : null;
 }
 
-export async function moderateTender(formData: FormData) {
+// Approving a submission: reuse the supplier (matched by email) or create it,
+// create the product, create the supplier's offer, then mark the submission.
+export async function approveSubmission(formData: FormData) {
   const supabase = await requireAdmin();
   if (!supabase) return;
 
   const id = String(formData.get("id"));
-  const status = formData.get("action") === "approve" ? "approved" : "rejected";
-  await supabase.from("tenders").update({ status }).eq("id", id);
+  const { data: sub } = await supabase
+    .from("submissions")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (!sub || sub.status !== "pending") return;
+
+  let supplierId = sub.supplier_id;
+  if (!supplierId) {
+    const { data: existing } = await supabase
+      .from("suppliers")
+      .select("id")
+      .ilike("email", sub.supplier_email)
+      .maybeSingle();
+
+    if (existing) {
+      supplierId = existing.id;
+    } else {
+      const { data: created } = await supabase
+        .from("suppliers")
+        .insert({
+          name: sub.supplier_name,
+          country: sub.supplier_country,
+          email: sub.supplier_email,
+        })
+        .select("id")
+        .single();
+      supplierId = created?.id;
+    }
+  }
+  if (!supplierId) return;
+
+  const { data: product } = await supabase
+    .from("products")
+    .insert({
+      name: sub.raw_name,
+      description: sub.raw_description,
+      category_slug: sub.category_slug,
+      unit: sub.raw_unit,
+    })
+    .select("id")
+    .single();
+  if (!product) return;
+
+  await supabase.from("offers").insert({
+    product_id: product.id,
+    supplier_id: supplierId,
+    unit_price: sub.raw_unit_price,
+    wholesale_price: sub.raw_wholesale_price,
+    min_wholesale_qty: sub.raw_min_wholesale_qty,
+    transport_small: sub.raw_transport_small ?? 0,
+    transport_bulk: sub.raw_transport_bulk ?? 0,
+  });
+
+  await supabase
+    .from("submissions")
+    .update({ status: "approved", supplier_id: supplierId })
+    .eq("id", id);
+
   revalidatePath("/", "layout");
 }
 
-export async function moderateBusiness(formData: FormData) {
+export async function rejectSubmission(formData: FormData) {
   const supabase = await requireAdmin();
   if (!supabase) return;
 
   const id = String(formData.get("id"));
-  const status = formData.get("action") === "approve" ? "approved" : "rejected";
-  await supabase.from("businesses").update({ status }).eq("id", id);
+  await supabase
+    .from("submissions")
+    .update({ status: "rejected" })
+    .eq("id", id)
+    .eq("status", "pending");
+
   revalidatePath("/", "layout");
 }

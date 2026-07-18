@@ -1,48 +1,85 @@
 export type Category = {
   id: number;
   slug: string;
+  parent_slug: string | null;
   name: Record<string, string>;
-  category_group: string | null;
   sort_order: number;
 };
 
-export type Tender = {
+export type Product = {
   id: string;
-  owner_id: string;
-  title: string;
+  name: string;
   description: string;
-  category_id: number | null;
-  type: "goods" | "services";
-  budget: number | null;
-  country: string;
-  city: string;
-  status: "pending" | "approved" | "rejected" | "deleted";
-  rejection_reason: string | null;
-  views: number;
+  category_slug: string | null;
+  unit: string;
+  image_url: string | null;
+  status: "active" | "hidden";
   created_at: string;
-  expires_at: string;
+  updated_at: string;
 };
 
-export type Business = {
+export type Supplier = {
   id: string;
-  owner_id: string;
   name: string;
-  tagline: string | null;
-  description: string;
-  category_ids: number[];
   country: string;
-  city: string;
-  website: string | null;
   email: string | null;
   phone: string | null;
-  logo_url: string | null;
-  status: "pending" | "approved" | "rejected" | "deleted" | "banned";
+  website: string | null;
+  lead_time: string | null;
+  description: string | null;
   created_at: string;
 };
 
-export const COUNTRIES = ["EE", "FI"] as const;
+export type Offer = {
+  id: string;
+  product_id: string;
+  supplier_id: string;
+  unit_price: number;
+  wholesale_price: number | null;
+  min_wholesale_qty: number | null;
+  transport_small: number;
+  transport_bulk: number;
+  status: "active" | "pending";
+  created_at: string;
+  updated_at: string;
+};
+
+export type TransportCompany = {
+  id: string;
+  name: string;
+  route: string;
+  days: string;
+  services: string[];
+  capacity: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  description: string | null;
+  featured: boolean;
+};
+
+export type Submission = {
+  id: string;
+  supplier_name: string;
+  supplier_email: string;
+  supplier_country: string;
+  supplier_id: string | null;
+  raw_name: string;
+  raw_description: string;
+  raw_unit: string;
+  raw_unit_price: number;
+  raw_wholesale_price: number | null;
+  raw_min_wholesale_qty: number | null;
+  raw_transport_small: number | null;
+  raw_transport_bulk: number | null;
+  category_slug: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
+
+export const UNITS = ["kpl", "m2", "jm", "m3"] as const;
 
 export function categoryName(category: Category | undefined, locale: string): string {
   if (!category) return "";
-  return category.name[locale] ?? category.name["en"] ?? category.slug;
+  return category.name[locale] ?? category.name["fi"] ?? category.slug;
 }

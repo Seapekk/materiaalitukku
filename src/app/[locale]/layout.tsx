@@ -9,11 +9,11 @@ import "../globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Materiaalitukku — Post tenders & find contractors",
+    default: "Materiaalitukku — Rakennusmateriaalien hintavertailu",
     template: "%s — Materiaalitukku",
   },
   description:
-    "Materiaalitukku connects people who need work done with local contractors and businesses in Estonia and Finland.",
+    "Vertaile rakennusmateriaalien hintoja ja rahtia Suomeen toimittajittain. Compare building material prices and freight to Finland.",
 };
 
 export default async function LocaleLayout({

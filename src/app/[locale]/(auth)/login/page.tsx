@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { login, type AuthState } from "../actions";
 
 export default function LoginPage() {
@@ -44,12 +43,6 @@ export default function LoginPage() {
           {t("loginButton")}
         </button>
       </form>
-      <p className="mt-4 text-sm text-slate-600">
-        {t("noAccount")}{" "}
-        <Link href="/register" className="text-emerald-700 underline">
-          {t("registerButton")}
-        </Link>
-      </p>
     </div>
   );
 }
