@@ -1,0 +1,129 @@
+{
+  "common": {
+    "appName": "Materiaalitukku",
+    "search": "Hae",
+    "all": "Kaikki",
+    "loading": "Ladataan…",
+    "back": "Takaisin",
+    "statusPending": "Odottaa tarkistusta",
+    "statusApproved": "Hyväksytty",
+    "statusRejected": "Hylätty"
+  },
+  "nav": {
+    "tenders": "Ilmoitukset",
+    "businesses": "Yritykset",
+    "postTender": "Jätä ilmoitus",
+    "login": "Kirjaudu",
+    "register": "Rekisteröidy",
+    "dashboard": "Oma tili",
+    "admin": "Admin",
+    "logout": "Kirjaudu ulos"
+  },
+  "landing": {
+    "heroTitle": "Löydä tekijä. Jätä ilmoitus. Saa tarjouksia.",
+    "heroText": "Materiaalitukku yhdistää työn tilaajat paikallisiin tekijöihin ja yrityksiin Virossa ja Suomessa.",
+    "ctaPost": "Jätä ilmoitus",
+    "ctaBrowse": "Selaa ilmoituksia",
+    "howTitle": "Näin se toimii",
+    "step1Title": "Jätä ilmoitus",
+    "step1Text": "Kerro mitä, missä ja milloin tarvitset. Vie kaksi minuuttia.",
+    "step2Title": "Yritykset vastaavat",
+    "step2Text": "Paikalliset tekijät näkevät ilmoituksesi ja ottavat yhteyttä.",
+    "step3Title": "Valitse ja teetä työ",
+    "step3Text": "Vertaile tarjouksia ja valitse sinulle sopivin.",
+    "bizTitle": "Oletko itse tekijä?",
+    "bizText": "Lisää yrityksesi hakemistoon ja tavoita uusia asiakkaita.",
+    "bizCta": "Lisää yrityksesi",
+    "latestTenders": "Uusimmat ilmoitukset",
+    "browseAll": "Katso kaikki"
+  },
+  "auth": {
+    "loginTitle": "Kirjaudu sisään",
+    "registerTitle": "Luo tili",
+    "email": "Sähköposti",
+    "password": "Salasana",
+    "displayName": "Nimi",
+    "loginButton": "Kirjaudu",
+    "registerButton": "Rekisteröidy",
+    "noAccount": "Ei vielä tiliä?",
+    "haveAccount": "Onko sinulla jo tili?",
+    "checkEmail": "Vahvista tilisi sähköpostissasi ja kirjaudu sitten sisään.",
+    "invalidCredentials": "Väärä sähköposti tai salasana.",
+    "genericError": "Jokin meni pieleen. Yritä uudelleen."
+  },
+  "tenders": {
+    "title": "Ilmoitukset",
+    "searchPlaceholder": "Hae ilmoituksia…",
+    "category": "Kategoria",
+    "country": "Maa",
+    "noResults": "Ilmoituksia ei löytynyt.",
+    "budget": "Budjetti",
+    "postedOn": "Lisätty",
+    "expiresOn": "Vanhenee",
+    "typeGoods": "Tavarat",
+    "typeServices": "Palvelut",
+    "contactTitle": "Yhteystiedot",
+    "contactHidden": "Yhteystiedot näkyvät kirjautumisen jälkeen.",
+    "loginToSee": "Kirjaudu nähdäksesi yhteystiedot"
+  },
+  "tenderForm": {
+    "title": "Jätä ilmoitus",
+    "fieldTitle": "Otsikko",
+    "fieldDescription": "Kuvaus",
+    "fieldCategory": "Kategoria",
+    "fieldType": "Tyyppi",
+    "fieldBudget": "Budjetti (€, valinnainen)",
+    "fieldCountry": "Maa",
+    "fieldCity": "Kaupunki",
+    "fieldEmail": "Yhteyssähköposti",
+    "fieldPhone": "Yhteyspuhelin (valinnainen)",
+    "submit": "Lähetä ilmoitus",
+    "submitted": "Kiitos! Ilmoituksesi on lähetetty ja tulee näkyviin tarkistuksen jälkeen.",
+    "loginRequired": "Kirjaudu sisään jättääksesi ilmoituksen.",
+    "genericError": "Jokin meni pieleen. Yritä uudelleen."
+  },
+  "businesses": {
+    "title": "Yritykset",
+    "searchPlaceholder": "Hae yrityksiä…",
+    "noResults": "Yrityksiä ei löytynyt.",
+    "website": "Verkkosivut",
+    "contactTitle": "Yhteystiedot",
+    "addBusiness": "Lisää yrityksesi",
+    "form": {
+      "name": "Yrityksen nimi",
+      "tagline": "Lyhyt kuvauslause",
+      "description": "Kuvaus",
+      "categories": "Kategoriat",
+      "country": "Maa",
+      "city": "Kaupunki",
+      "website": "Verkkosivut (valinnainen)",
+      "email": "Julkinen sähköposti",
+      "phone": "Puhelin (valinnainen)",
+      "submit": "Lähetä yritys",
+      "submitted": "Kiitos! Yrityksesi on lähetetty ja listataan tarkistuksen jälkeen.",
+      "loginRequired": "Kirjaudu sisään lisätäksesi yrityksen.",
+      "genericError": "Jokin meni pieleen. Yritä uudelleen."
+    }
+  },
+  "dashboard": {
+    "title": "Oma tili",
+    "myTenders": "Omat ilmoitukset",
+    "noTenders": "Et ole vielä jättänyt yhtään ilmoitusta.",
+    "myBusiness": "Oma yritys",
+    "noBusiness": "Et ole vielä lisännyt yritystä."
+  },
+  "admin": {
+    "title": "Admin — moderointi",
+    "pendingTenders": "Odottavat ilmoitukset",
+    "pendingBusinesses": "Odottavat yritykset",
+    "approve": "Hyväksy",
+    "reject": "Hylkää",
+    "empty": "Ei mitään tarkistettavaa. 🎉"
+  },
+  "footer": {
+    "rights": "Kaikki oikeudet pidätetään.",
+    "tenders": "Ilmoitukset",
+    "businesses": "Yritykset",
+    "pricing": "Hinnat"
+  }
+}

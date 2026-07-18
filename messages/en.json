@@ -1,0 +1,129 @@
+{
+  "common": {
+    "appName": "Materiaalitukku",
+    "search": "Search",
+    "all": "All",
+    "loading": "Loading…",
+    "back": "Back",
+    "statusPending": "Pending review",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected"
+  },
+  "nav": {
+    "tenders": "Tenders",
+    "businesses": "Businesses",
+    "postTender": "Post a tender",
+    "login": "Log in",
+    "register": "Register",
+    "dashboard": "My account",
+    "admin": "Admin",
+    "logout": "Log out"
+  },
+  "landing": {
+    "heroTitle": "Find contractors. Post jobs. Get offers.",
+    "heroText": "Materiaalitukku connects people who need work done with local contractors and businesses in Estonia and Finland.",
+    "ctaPost": "Post a tender",
+    "ctaBrowse": "Browse tenders",
+    "howTitle": "How it works",
+    "step1Title": "Post your job",
+    "step1Text": "Describe what you need, where and when. It takes two minutes.",
+    "step2Title": "Businesses respond",
+    "step2Text": "Local contractors see your tender and get in touch.",
+    "step3Title": "Choose and get it done",
+    "step3Text": "Compare offers and pick the one that suits you.",
+    "bizTitle": "Are you a contractor?",
+    "bizText": "List your business in the directory and reach new customers.",
+    "bizCta": "Add your business",
+    "latestTenders": "Latest tenders",
+    "browseAll": "Browse all"
+  },
+  "auth": {
+    "loginTitle": "Log in",
+    "registerTitle": "Create an account",
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Name",
+    "loginButton": "Log in",
+    "registerButton": "Register",
+    "noAccount": "No account yet?",
+    "haveAccount": "Already have an account?",
+    "checkEmail": "Check your email to confirm your account, then log in.",
+    "invalidCredentials": "Wrong email or password.",
+    "genericError": "Something went wrong. Please try again."
+  },
+  "tenders": {
+    "title": "Tenders",
+    "searchPlaceholder": "Search tenders…",
+    "category": "Category",
+    "country": "Country",
+    "noResults": "No tenders found.",
+    "budget": "Budget",
+    "postedOn": "Posted",
+    "expiresOn": "Expires",
+    "typeGoods": "Goods",
+    "typeServices": "Services",
+    "contactTitle": "Contact details",
+    "contactHidden": "Contact details are visible after logging in.",
+    "loginToSee": "Log in to see contact details"
+  },
+  "tenderForm": {
+    "title": "Post a tender",
+    "fieldTitle": "Title",
+    "fieldDescription": "Description",
+    "fieldCategory": "Category",
+    "fieldType": "Type",
+    "fieldBudget": "Budget (€, optional)",
+    "fieldCountry": "Country",
+    "fieldCity": "City",
+    "fieldEmail": "Contact email",
+    "fieldPhone": "Contact phone (optional)",
+    "submit": "Submit tender",
+    "submitted": "Thank you! Your tender was submitted and will be visible after review.",
+    "loginRequired": "You need to log in before posting a tender.",
+    "genericError": "Something went wrong. Please try again."
+  },
+  "businesses": {
+    "title": "Businesses",
+    "searchPlaceholder": "Search businesses…",
+    "noResults": "No businesses found.",
+    "website": "Website",
+    "contactTitle": "Contact",
+    "addBusiness": "Add your business",
+    "form": {
+      "name": "Business name",
+      "tagline": "Short tagline",
+      "description": "Description",
+      "categories": "Categories",
+      "country": "Country",
+      "city": "City",
+      "website": "Website (optional)",
+      "email": "Public email",
+      "phone": "Phone (optional)",
+      "submit": "Submit business",
+      "submitted": "Thank you! Your business was submitted and will be listed after review.",
+      "loginRequired": "You need to log in before adding a business.",
+      "genericError": "Something went wrong. Please try again."
+    }
+  },
+  "dashboard": {
+    "title": "My account",
+    "myTenders": "My tenders",
+    "noTenders": "You haven't posted any tenders yet.",
+    "myBusiness": "My business",
+    "noBusiness": "You haven't added a business yet."
+  },
+  "admin": {
+    "title": "Admin — moderation",
+    "pendingTenders": "Pending tenders",
+    "pendingBusinesses": "Pending businesses",
+    "approve": "Approve",
+    "reject": "Reject",
+    "empty": "Nothing waiting for review. 🎉"
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "tenders": "Tenders",
+    "businesses": "Businesses",
+    "pricing": "Pricing"
+  }
+}

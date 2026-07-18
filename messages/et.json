@@ -1,0 +1,129 @@
+{
+  "common": {
+    "appName": "Materiaalitukku",
+    "search": "Otsi",
+    "all": "Kõik",
+    "loading": "Laadimine…",
+    "back": "Tagasi",
+    "statusPending": "Ootab ülevaatust",
+    "statusApproved": "Kinnitatud",
+    "statusRejected": "Tagasi lükatud"
+  },
+  "nav": {
+    "tenders": "Kuulutused",
+    "businesses": "Ettevõtted",
+    "postTender": "Lisa kuulutus",
+    "login": "Logi sisse",
+    "register": "Registreeru",
+    "dashboard": "Minu konto",
+    "admin": "Admin",
+    "logout": "Logi välja"
+  },
+  "landing": {
+    "heroTitle": "Leia tegija. Lisa kuulutus. Saa pakkumisi.",
+    "heroText": "Materiaalitukku ühendab töö tellijad kohalike tegijate ja ettevõtetega Eestis ja Soomes.",
+    "ctaPost": "Lisa kuulutus",
+    "ctaBrowse": "Sirvi kuulutusi",
+    "howTitle": "Kuidas see töötab",
+    "step1Title": "Lisa oma kuulutus",
+    "step1Text": "Kirjelda, mida, kus ja millal vaja on. Võtab kaks minutit.",
+    "step2Title": "Ettevõtted vastavad",
+    "step2Text": "Kohalikud tegijad näevad sinu kuulutust ja võtavad ühendust.",
+    "step3Title": "Vali ja lase teha",
+    "step3Text": "Võrdle pakkumisi ja vali endale sobivaim.",
+    "bizTitle": "Oled ise tegija?",
+    "bizText": "Lisa oma ettevõte kataloogi ja jõua uute klientideni.",
+    "bizCta": "Lisa oma ettevõte",
+    "latestTenders": "Viimased kuulutused",
+    "browseAll": "Vaata kõiki"
+  },
+  "auth": {
+    "loginTitle": "Logi sisse",
+    "registerTitle": "Loo konto",
+    "email": "E-post",
+    "password": "Parool",
+    "displayName": "Nimi",
+    "loginButton": "Logi sisse",
+    "registerButton": "Registreeru",
+    "noAccount": "Pole veel kontot?",
+    "haveAccount": "Konto juba olemas?",
+    "checkEmail": "Kinnita konto oma e-postis ja logi seejärel sisse.",
+    "invalidCredentials": "Vale e-post või parool.",
+    "genericError": "Midagi läks valesti. Palun proovi uuesti."
+  },
+  "tenders": {
+    "title": "Kuulutused",
+    "searchPlaceholder": "Otsi kuulutusi…",
+    "category": "Kategooria",
+    "country": "Riik",
+    "noResults": "Kuulutusi ei leitud.",
+    "budget": "Eelarve",
+    "postedOn": "Lisatud",
+    "expiresOn": "Aegub",
+    "typeGoods": "Kaubad",
+    "typeServices": "Teenused",
+    "contactTitle": "Kontaktandmed",
+    "contactHidden": "Kontaktandmed on nähtavad pärast sisselogimist.",
+    "loginToSee": "Logi sisse, et näha kontaktandmeid"
+  },
+  "tenderForm": {
+    "title": "Lisa kuulutus",
+    "fieldTitle": "Pealkiri",
+    "fieldDescription": "Kirjeldus",
+    "fieldCategory": "Kategooria",
+    "fieldType": "Tüüp",
+    "fieldBudget": "Eelarve (€, valikuline)",
+    "fieldCountry": "Riik",
+    "fieldCity": "Linn",
+    "fieldEmail": "Kontakt-e-post",
+    "fieldPhone": "Kontakttelefon (valikuline)",
+    "submit": "Saada kuulutus",
+    "submitted": "Aitäh! Sinu kuulutus on esitatud ja muutub nähtavaks pärast ülevaatust.",
+    "loginRequired": "Kuulutuse lisamiseks pead sisse logima.",
+    "genericError": "Midagi läks valesti. Palun proovi uuesti."
+  },
+  "businesses": {
+    "title": "Ettevõtted",
+    "searchPlaceholder": "Otsi ettevõtteid…",
+    "noResults": "Ettevõtteid ei leitud.",
+    "website": "Veebileht",
+    "contactTitle": "Kontakt",
+    "addBusiness": "Lisa oma ettevõte",
+    "form": {
+      "name": "Ettevõtte nimi",
+      "tagline": "Lühike tutvustuslause",
+      "description": "Kirjeldus",
+      "categories": "Kategooriad",
+      "country": "Riik",
+      "city": "Linn",
+      "website": "Veebileht (valikuline)",
+      "email": "Avalik e-post",
+      "phone": "Telefon (valikuline)",
+      "submit": "Saada ettevõte",
+      "submitted": "Aitäh! Sinu ettevõte on esitatud ja ilmub kataloogi pärast ülevaatust.",
+      "loginRequired": "Ettevõtte lisamiseks pead sisse logima.",
+      "genericError": "Midagi läks valesti. Palun proovi uuesti."
+    }
+  },
+  "dashboard": {
+    "title": "Minu konto",
+    "myTenders": "Minu kuulutused",
+    "noTenders": "Sa pole veel ühtegi kuulutust lisanud.",
+    "myBusiness": "Minu ettevõte",
+    "noBusiness": "Sa pole veel ettevõtet lisanud."
+  },
+  "admin": {
+    "title": "Admin — modereerimine",
+    "pendingTenders": "Ootel kuulutused",
+    "pendingBusinesses": "Ootel ettevõtted",
+    "approve": "Kinnita",
+    "reject": "Lükka tagasi",
+    "empty": "Midagi pole ülevaatust ootamas. 🎉"
+  },
+  "footer": {
+    "rights": "Kõik õigused kaitstud.",
+    "tenders": "Kuulutused",
+    "businesses": "Ettevõtted",
+    "pricing": "Hinnad"
+  }
+}
