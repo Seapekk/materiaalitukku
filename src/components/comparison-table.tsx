@@ -21,13 +21,17 @@ export function ComparisonTable({
 
   const comparison = getProductComparison(offers, suppliers, Math.max(1, qty));
   if (!comparison) {
-    return <p className="text-slate-500">{t("noOffers")}</p>;
+    return (
+      <p className="border-2 border-black bg-white p-6 text-center font-mono text-sm font-bold uppercase text-gray-500">
+        ⚠️ {t("noOffers")}
+      </p>
+    );
   }
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4">
-        <label className="text-sm font-medium" htmlFor="qty">
+      <div className="mb-4 flex items-center gap-3">
+        <label className="label-mono" htmlFor="qty">
           {t("quantity")} ({product.unit})
         </label>
         <input
@@ -36,12 +40,13 @@ export function ComparisonTable({
           min={1}
           value={qty}
           onChange={(e) => setQty(Number(e.target.value) || 1)}
-          className="w-28 border border-slate-300 rounded px-3 py-2 bg-white"
+          className="input-brutal w-28 font-mono font-bold"
         />
       </div>
 
       {comparison.savings > 0 && (
-        <p className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-3 text-sm">
+        <p className="mb-4 inline-block border-2 border-green-300 bg-green-100 px-3 py-2 font-mono text-xs font-bold uppercase text-green-800">
+          🟢{" "}
           {t("savings", {
             amount: comparison.savings.toFixed(2),
             pct: comparison.savingsPct,
@@ -49,16 +54,28 @@ export function ComparisonTable({
         </p>
       )}
 
-      <div className="overflow-x-auto bg-white border border-slate-200 rounded-lg">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
-              <th className="px-4 py-3 font-medium">{t("supplier")}</th>
-              <th className="px-4 py-3 font-medium text-right">{t("unitPrice")}</th>
-              <th className="px-4 py-3 font-medium text-right">{t("wholesalePrice")}</th>
-              <th className="px-4 py-3 font-medium text-right">{t("freight")}</th>
-              <th className="px-4 py-3 font-medium text-right">{t("landedTotal")}</th>
-              <th className="px-4 py-3 font-medium text-right">{t("landedPerUnit")}</th>
+      <div className="overflow-x-auto border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+          <thead className="bg-[#1450A3] text-white">
+            <tr>
+              <th className="border-b-4 border-r-2 border-black p-3 font-mono text-[11px] font-bold uppercase tracking-wider">
+                {t("supplier")}
+              </th>
+              <th className="border-b-4 border-r-2 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+                {t("unitPrice")}
+              </th>
+              <th className="border-b-4 border-r-2 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+                {t("wholesalePrice")}
+              </th>
+              <th className="border-b-4 border-r-2 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+                {t("freight")}
+              </th>
+              <th className="border-b-4 border-r-2 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+                {t("landedTotal")}
+              </th>
+              <th className="border-b-4 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+                {t("landedPerUnit")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -69,53 +86,67 @@ export function ComparisonTable({
               return (
                 <tr
                   key={row.offer.id}
-                  className={`border-b border-slate-100 last:border-0 ${
-                    isBest ? "bg-emerald-50" : ""
+                  className={`border-b-2 border-black transition-colors last:border-b-0 hover:bg-[#E8F0FE] ${
+                    isBest
+                      ? "bg-yellow-100"
+                      : i % 2 === 0
+                        ? "bg-white"
+                        : "bg-slate-50"
                   }`}
                 >
-                  <td className="px-4 py-3">
-                    <span className="mr-1">
-                      {getCountryFlag(row.supplier?.country ?? "")}
-                    </span>
-                    <span className="font-medium">{row.supplier?.name ?? "—"}</span>
-                    <span className="text-slate-400 text-xs ml-1">
+                  <td className="border-r-2 border-black p-3 align-middle">
+                    <span className="block font-mono text-xs font-extrabold uppercase text-black">
+                      {getCountryFlag(row.supplier?.country ?? "")}{" "}
                       {getCountryName(row.supplier?.country ?? "", locale)}
+                      {isBest && (
+                        <span className="ml-2 border border-yellow-500 bg-yellow-300 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-yellow-900">
+                          {t("best")}
+                        </span>
+                      )}
+                      {isBestFi && (
+                        <span className="ml-2 border border-slate-300 bg-slate-200 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-slate-600">
+                          {t("bestFi")}
+                        </span>
+                      )}
                     </span>
-                    {isBest && (
-                      <span className="ml-2 text-xs bg-emerald-700 text-white rounded-full px-2 py-0.5">
-                        {t("best")}
-                      </span>
-                    )}
-                    {isBestFi && (
-                      <span className="ml-2 text-xs bg-slate-200 text-slate-700 rounded-full px-2 py-0.5">
-                        {t("bestFi")}
-                      </span>
-                    )}
+                    <span className="mt-1 block text-sm text-stone-700">
+                      <strong className="text-[#1450A3]">
+                        {row.supplier?.name ?? "—"}
+                      </strong>
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="border-r-2 border-black p-3 text-right align-middle font-mono">
                     {row.offer.unit_price.toFixed(2)} €
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="border-r-2 border-black p-3 text-right align-middle font-mono">
                     {row.offer.wholesale_price != null ? (
                       <>
-                        {row.offer.wholesale_price.toFixed(2)} €{" "}
-                        <span className="text-xs text-slate-400">
-                          {row.offer.min_wholesale_qty != null &&
-                            t("minQty", { qty: row.offer.min_wholesale_qty })}
-                        </span>
+                        {row.offer.wholesale_price.toFixed(2)} €
+                        {row.offer.min_wholesale_qty != null && (
+                          <span className="block text-[10px] font-bold uppercase text-gray-500">
+                            {t("minQty", { qty: row.offer.min_wholesale_qty })}
+                          </span>
+                        )}
                       </>
                     ) : (
                       "—"
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="border-r-2 border-black p-3 text-right align-middle font-mono">
                     {row.calc.freight.toFixed(2)} €
                   </td>
-                  <td className="px-4 py-3 text-right font-medium">
+                  <td className="border-r-2 border-black p-3 text-right align-middle font-mono font-bold">
                     {row.calc.landedTotal.toFixed(2)} €
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-emerald-700">
+                  <td
+                    className={`p-3 text-right align-middle font-mono text-base font-black ${
+                      isBest ? "text-yellow-900" : "text-[#1450A3]"
+                    }`}
+                  >
                     {row.calc.landedPerUnit.toFixed(2)} €
+                    <span className="block text-[10px] font-bold uppercase text-gray-500">
+                      / {product.unit}
+                    </span>
                   </td>
                 </tr>
               );

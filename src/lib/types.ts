@@ -77,6 +77,23 @@ export type Submission = {
   created_at: string;
 };
 
+export type Message = {
+  id: string;
+  sender_email: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+};
+
+export type PriceChangeRequest = {
+  id: string;
+  supplier_email: string;
+  offer_id: string;
+  new_unit_price: number;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
+
 export const UNITS = ["kpl", "m2", "jm", "m3"] as const;
 
 export function categoryName(category: Category | undefined, locale: string): string {

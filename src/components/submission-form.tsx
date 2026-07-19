@@ -16,28 +16,29 @@ export function SubmissionForm({ categories }: { categories: Category[] }) {
 
   if (state.success) {
     return (
-      <p className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-4">
-        {t("submitted")}
+      <p className="border-2 border-black bg-green-100 p-4 font-mono text-sm font-bold uppercase text-green-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        🟢 {t("submitted")}
       </p>
     );
   }
 
-  const inputCls = "mt-1 w-full border border-slate-300 rounded px-3 py-2 bg-white";
-
   return (
-    <form action={formAction} className="space-y-4 bg-white p-6 rounded-lg border border-slate-200">
-      <div className="grid sm:grid-cols-2 gap-4">
+    <form
+      action={formAction}
+      className="space-y-5 border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="text-sm font-medium">{t("supplierName")}</span>
-          <input name="supplierName" required maxLength={120} className={inputCls} />
+          <span className="label-mono">{t("supplierName")}</span>
+          <input name="supplierName" required maxLength={120} className="input-brutal mt-1" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("supplierEmail")}</span>
-          <input name="supplierEmail" type="email" required className={inputCls} />
+          <span className="label-mono">{t("supplierEmail")}</span>
+          <input name="supplierEmail" type="email" required className="input-brutal mt-1" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("supplierCountry")}</span>
-          <select name="supplierCountry" className={inputCls}>
+          <span className="label-mono">{t("supplierCountry")}</span>
+          <select name="supplierCountry" className="input-brutal mt-1 cursor-pointer font-mono text-xs font-bold">
             {SUPPLIER_COUNTRIES.map((c) => (
               <option key={c} value={c}>
                 {getCountryFlag(c)} {getCountryName(c, locale)}
@@ -47,20 +48,20 @@ export function SubmissionForm({ categories }: { categories: Category[] }) {
         </label>
       </div>
 
-      <hr className="border-slate-200" />
+      <hr className="border-t-2 border-dashed border-gray-300" />
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className="block sm:col-span-2">
-          <span className="text-sm font-medium">{t("productName")}</span>
-          <input name="productName" required maxLength={160} className={inputCls} />
+          <span className="label-mono">{t("productName")}</span>
+          <input name="productName" required maxLength={160} className="input-brutal mt-1" />
         </label>
         <label className="block sm:col-span-2">
-          <span className="text-sm font-medium">{t("description")}</span>
-          <textarea name="description" rows={3} className={inputCls} />
+          <span className="label-mono">{t("description")}</span>
+          <textarea name="description" rows={3} className="input-brutal mt-1" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("category")}</span>
-          <select name="category" className={inputCls}>
+          <span className="label-mono">{t("category")}</span>
+          <select name="category" className="input-brutal mt-1 cursor-pointer font-mono text-xs font-bold">
             {categories.map((c) => (
               <option key={c.slug} value={c.slug}>
                 {c.parent_slug ? "— " : ""}
@@ -70,8 +71,8 @@ export function SubmissionForm({ categories }: { categories: Category[] }) {
           </select>
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("unit")}</span>
-          <select name="unit" className={inputCls}>
+          <span className="label-mono">{t("unit")}</span>
+          <select name="unit" className="input-brutal mt-1 cursor-pointer font-mono text-xs font-bold">
             {UNITS.map((u) => (
               <option key={u} value={u}>
                 {u}
@@ -80,33 +81,37 @@ export function SubmissionForm({ categories }: { categories: Category[] }) {
           </select>
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("unitPrice")}</span>
-          <input name="unitPrice" type="number" step="0.01" min="0" required className={inputCls} />
+          <span className="label-mono">{t("unitPrice")}</span>
+          <input name="unitPrice" type="number" step="0.01" min="0" required className="input-brutal mt-1 font-mono font-bold" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("wholesalePrice")}</span>
-          <input name="wholesalePrice" type="number" step="0.01" min="0" className={inputCls} />
+          <span className="label-mono">{t("wholesalePrice")}</span>
+          <input name="wholesalePrice" type="number" step="0.01" min="0" className="input-brutal mt-1 font-mono font-bold" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("minWholesaleQty")}</span>
-          <input name="minWholesaleQty" type="number" step="1" min="0" className={inputCls} />
+          <span className="label-mono">{t("minWholesaleQty")}</span>
+          <input name="minWholesaleQty" type="number" step="1" min="0" className="input-brutal mt-1 font-mono font-bold" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("transportSmall")}</span>
-          <input name="transportSmall" type="number" step="0.01" min="0" className={inputCls} />
+          <span className="label-mono">{t("transportSmall")}</span>
+          <input name="transportSmall" type="number" step="0.01" min="0" className="input-brutal mt-1 font-mono font-bold" />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("transportBulk")}</span>
-          <input name="transportBulk" type="number" step="0.01" min="0" className={inputCls} />
+          <span className="label-mono">{t("transportBulk")}</span>
+          <input name="transportBulk" type="number" step="0.01" min="0" className="input-brutal mt-1 font-mono font-bold" />
         </label>
       </div>
 
-      {state.error && <p className="text-sm text-red-600">{t(state.error)}</p>}
+      {state.error && (
+        <p className="border-2 border-red-300 bg-red-100 px-3 py-2 font-mono text-xs font-bold uppercase text-red-700">
+          {t(state.error)}
+        </p>
+      )}
       <button
         disabled={pending}
-        className="bg-emerald-700 text-white rounded px-6 py-2 font-medium hover:bg-emerald-800 disabled:opacity-50 cursor-pointer"
+        className="btn-brutal bg-[#10B981] px-6 py-2.5 text-white hover:bg-[#059669]"
       >
-        {t("submit")}
+        {t("submit")} →
       </button>
     </form>
   );

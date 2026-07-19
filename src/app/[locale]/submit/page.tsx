@@ -17,8 +17,12 @@ export default async function SubmitPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">{t("title")}</h1>
-      <p className="text-slate-600 mb-6">{t("intro")}</p>
+      <h1 className="font-mono text-2xl font-black uppercase tracking-tight md:text-3xl">
+        {t("title")}
+      </h1>
+      <p className="mb-6 mt-2 text-sm leading-relaxed text-stone-600">
+        {t("intro")}
+      </p>
       <SubmissionForm categories={categories ?? []} />
     </div>
   );

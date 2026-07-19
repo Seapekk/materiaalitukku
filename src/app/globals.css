@@ -1,8 +1,40 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace,
+    SFMono-Regular, monospace;
+  --color-brand: #1450a3;
+  --color-brand-mid: #2563c4;
+  --color-brand-light: #ebf2ff;
+  --color-ink: #0d1117;
+}
+
 body {
-  background: #f8fafc;
-  color: #0f172a;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  background: #f7f8fa;
+  color: #0d1117;
+  font-size: 14px;
+}
+
+@layer components {
+  /* Sharp bordered input, AI Studio style */
+  .input-brutal {
+    @apply w-full rounded-none border-2 border-black bg-white px-3 py-2 text-sm focus:outline-none focus:bg-[#EBF2FF];
+  }
+
+  /* Tiny mono uppercase field label */
+  .label-mono {
+    @apply block font-mono text-[10px] font-bold uppercase tracking-wider text-gray-500;
+  }
+
+  /* Hard-shadow button */
+  .btn-brutal {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-none border-2 border-black px-4 py-2 text-xs font-black uppercase tracking-tight shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] disabled:opacity-50;
+  }
+
+  /* Blue category chip */
+  .chip-cat {
+    @apply inline-block border border-blue-400 bg-blue-100 px-2 py-0.5 font-mono text-[10px] font-extrabold uppercase tracking-tight text-blue-800;
+  }
 }

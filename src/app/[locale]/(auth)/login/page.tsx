@@ -12,35 +12,42 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="max-w-md mx-auto px-4 py-12">
-      <h1 className="text-2xl font-bold mb-6">{t("loginTitle")}</h1>
-      <form action={formAction} className="space-y-4 bg-white p-6 rounded-lg border border-slate-200">
+    <div className="mx-auto max-w-md px-4 py-12">
+      <h1 className="mb-6 font-mono text-2xl font-black uppercase tracking-tight">
+        🔐 {t("loginTitle")}
+      </h1>
+      <form
+        action={formAction}
+        className="space-y-4 border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+      >
         <label className="block">
-          <span className="text-sm font-medium">{t("email")}</span>
+          <span className="label-mono">{t("email")}</span>
           <input
             name="email"
             type="email"
             required
-            className="mt-1 w-full border border-slate-300 rounded px-3 py-2"
+            className="input-brutal mt-1 font-mono"
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">{t("password")}</span>
+          <span className="label-mono">{t("password")}</span>
           <input
             name="password"
             type="password"
             required
-            className="mt-1 w-full border border-slate-300 rounded px-3 py-2"
+            className="input-brutal mt-1 font-mono"
           />
         </label>
         {state.error && (
-          <p className="text-sm text-red-600">{t(state.error)}</p>
+          <p className="border-2 border-red-300 bg-red-100 px-3 py-2 font-mono text-xs font-bold uppercase text-red-700">
+            {t(state.error)}
+          </p>
         )}
         <button
           disabled={pending}
-          className="w-full bg-emerald-700 text-white rounded py-2 font-medium hover:bg-emerald-800 disabled:opacity-50 cursor-pointer"
+          className="btn-brutal w-full bg-[#1450A3] py-2.5 text-white hover:bg-black"
         >
-          {t("loginButton")}
+          {t("loginButton")} →
         </button>
       </form>
     </div>

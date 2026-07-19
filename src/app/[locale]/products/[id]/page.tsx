@@ -70,27 +70,40 @@ export default async function ProductPage({
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
-        <h1 className="text-2xl font-bold">{product.name}</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          {category && <>{categoryName(category, locale)} · </>}
-          {product.unit}
-        </p>
+    <div className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mb-6 border-2 border-black bg-slate-50 p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:p-8">
+        <div className="mb-2 flex flex-wrap items-center gap-3">
+          {category && (
+            <span className="border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-[#1450A3]">
+              {categoryName(category, locale)}
+            </span>
+          )}
+          <span className="font-mono text-xs font-bold text-gray-500">
+            {t("quantity")}:{" "}
+            <span className="text-sm text-gray-800">{product.unit}</span>
+          </span>
+        </div>
+        <h1 className="font-mono text-xl font-black uppercase leading-tight tracking-tight text-black md:text-3xl">
+          {product.name}
+        </h1>
         {product.description && (
-          <p className="mt-3 text-slate-700 whitespace-pre-wrap">
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-stone-700">
             {product.description}
           </p>
         )}
       </div>
 
-      <h2 className="text-xl font-semibold mb-4">{t("comparisonTitle")}</h2>
+      <h2 className="mb-4 font-mono text-xs font-bold uppercase tracking-wider text-black">
+        📊 {t("comparisonTitle")}
+      </h2>
       <ComparisonTable
         product={product}
         offers={offers ?? []}
         suppliers={suppliers}
       />
-      <p className="text-xs text-slate-400 mt-3">{tc("vatNote")}</p>
+      <p className="mt-3 font-mono text-[10px] font-bold uppercase text-gray-400">
+        {tc("vatNote")}
+      </p>
     </div>
   );
 }

@@ -34,3 +34,40 @@ export function getCountryName(code: string, locale: string): string {
   const norm = (code ?? "").trim().toLowerCase();
   return COUNTRY_NAMES[norm]?.[locale] ?? norm.toUpperCase();
 }
+
+// Standard VAT rates per country, copied from the AI Studio app.
+export const EU_VAT_RATES: Record<string, number> = {
+  fi: 25.5,
+  se: 25,
+  ee: 24,
+  de: 19,
+  pl: 23,
+  at: 20,
+  be: 21,
+  bg: 20,
+  hr: 25,
+  cy: 19,
+  cz: 21,
+  dk: 25,
+  fr: 20,
+  gr: 24,
+  hu: 27,
+  ie: 23,
+  it: 22,
+  lv: 21,
+  lt: 21,
+  lu: 17,
+  mt: 18,
+  nl: 21,
+  pt: 23,
+  ro: 21,
+  sk: 23,
+  si: 22,
+  es: 21,
+};
+
+export function getVatRate(countryCode?: string): number {
+  if (!countryCode) return 0;
+  const code = countryCode.trim().toLowerCase();
+  return EU_VAT_RATES[code] !== undefined ? EU_VAT_RATES[code] : 21;
+}

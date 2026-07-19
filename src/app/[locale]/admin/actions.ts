@@ -101,3 +101,70 @@ export async function rejectSubmission(formData: FormData) {
 
   revalidatePath("/", "layout");
 }
+
+export async function markRegistrationDone(formData: FormData) {
+  const supabase = await requireAdmin();
+  if (!supabase) return;
+
+  await supabase
+    .from("registrations")
+    .update({ status: "done" })
+    .eq("id", String(formData.get("id")));
+
+  revalidatePath("/", "layout");
+}
+
+export async function markMessageRead(formData: FormData) {
+  const supabase = await requireAdmin();
+  if (!supabase) return;
+
+  await supabase
+    .from("messages")
+    .update({ read: true })
+    .eq("id", String(formData.get("id")));
+
+  revalidatePath("/", "layout");
+}
+
+// Approving a price change request writes the new price onto the offer.
+export async function approvePriceChange(formData: FormData) {
+  const supabase = await requireAdmin();
+  if (!supabase) return;
+
+  const id = String(formData.get("id"));
+  const { data: req } = await supabase
+    .from("price_change_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (!req || req.status !== "pending") return;
+
+  const { error } = await supabase
+    .from("offers")
+    .update({
+      unit_price: req.new_unit_price,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", req.offer_id);
+  if (error) return;
+
+  await supabase
+    .from("price_change_requests")
+    .update({ status: "approved" })
+    .eq("id", id);
+
+  revalidatePath("/", "layout");
+}
+
+export async function rejectPriceChange(formData: FormData) {
+  const supabase = await requireAdmin();
+  if (!supabase) return;
+
+  await supabase
+    .from("price_change_requests")
+    .update({ status: "rejected" })
+    .eq("id", String(formData.get("id")))
+    .eq("status", "pending");
+
+  revalidatePath("/", "layout");
+}
