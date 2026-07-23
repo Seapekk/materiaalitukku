@@ -27,7 +27,7 @@ function ContactCard() {
 
   if (step === "done") {
     return (
-      <div className="border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+      <div className="border border-slate-200 bg-white p-6">
         <div className="border-2 border-emerald-500 bg-emerald-50 p-4">
           <p className="font-mono text-xs font-bold uppercase text-emerald-900">
             🟢 {t("contactDone")}
@@ -39,7 +39,7 @@ function ContactCard() {
   }
 
   return (
-    <div className="space-y-4 border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+    <div className="space-y-4 border border-slate-200 bg-white p-6">
       <div className="border-b border-stone-200 pb-3">
         <h3 className="font-mono text-sm font-bold uppercase text-stone-900">
           ✉️ {t("contactTitle")}
@@ -85,7 +85,7 @@ function ContactCard() {
             if (!message.trim()) return setError("emptyMessage");
             setStep("confirm");
           }}
-          className="btn-brutal w-full bg-stone-900 py-3 text-white hover:bg-black"
+          className="btn-brutal w-full bg-brand py-3 text-white hover:bg-brand-mid"
         >
           {t("getVerification")} →
         </button>
@@ -166,7 +166,7 @@ function PriceChangeCard() {
 
   if (step === "done") {
     return (
-      <div className="border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+      <div className="border border-slate-200 bg-white p-6">
         <div className="border-2 border-emerald-500 bg-emerald-50 p-4">
           <p className="font-mono text-xs font-bold uppercase text-emerald-900">
             🟢 {t("priceDone")}
@@ -180,7 +180,7 @@ function PriceChangeCard() {
   const selected = offers.find((o) => o.id === offerId);
 
   return (
-    <div className="space-y-4 border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+    <div className="space-y-4 border border-slate-200 bg-white p-6">
       <div className="border-b border-stone-200 pb-3">
         <h3 className="font-mono text-sm font-bold uppercase text-stone-900">
           💶 {t("priceTitle")}
@@ -266,7 +266,7 @@ function PriceChangeCard() {
                   return setError("invalidPrice");
                 setStep("confirm");
               }}
-              className="btn-brutal w-full bg-[#1450A3] py-3 text-white hover:bg-black"
+              className="btn-brutal w-full bg-[#1450A3] py-3 text-white hover:bg-brand-mid"
             >
               {t("getVerification")} →
             </button>

@@ -25,7 +25,7 @@ const TABS = [
 ] as const;
 
 const ACTION_BUTTONS = [
-  { href: "/hinnoittelu", key: "addProducts", idle: "bg-[#10B981] hover:bg-[#059669] text-white" },
+  { href: "/addproducts", key: "addProducts", idle: "bg-[#10B981] hover:bg-[#059669] text-white" },
   { href: "/addbusiness", key: "addBusiness", idle: "bg-[#8B5CF6] hover:bg-[#7C3AED] text-white" },
   { href: "/yhteystiedot", key: "contact", idle: "bg-[#3B82F6] hover:bg-[#2563EB] text-white" },
   { href: "/admin", key: "adminPanel", idle: "bg-[#EF4444] hover:bg-[#DC2626] text-white" },
@@ -45,7 +45,7 @@ export function HeaderNav({
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b-2 border-black bg-white shadow-sm">
+    <nav className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white shadow-sm">
       {/* Main header row */}
       <div className="flex h-[75px] w-full items-center justify-between pl-4 pr-4 lg:h-[85px] lg:pl-8 lg:pr-0">
         <Link href="/" className="flex select-none flex-col justify-center">
@@ -57,7 +57,8 @@ export function HeaderNav({
           </span>
         </Link>
 
-        {/* Desktop Menu (hidden on mobile, visible on lg) */}
+        {/* Desktop Menu (hidden on mobile, visible on lg). The user area fades
+            into red/yellow attention stripes at an angle, per the spec. */}
         <div
           className="hidden h-full items-center pr-8 lg:flex"
           style={{
@@ -90,10 +91,10 @@ export function HeaderNav({
               <Link
                 key={btn.key}
                 href={btn.href}
-                className={`mx-1 flex shrink-0 cursor-pointer items-center gap-1 rounded-none border-2 border-black px-3.5 py-2 text-xs font-black uppercase transition-all active:translate-x-[1px] active:translate-y-[1px] ${
+                className={`mx-1 flex shrink-0 cursor-pointer items-center gap-1 rounded-md border border-slate-200 px-3.5 py-2 text-xs font-semibold uppercase transition-all ${
                   isActive(btn.href)
-                    ? `${btn.key === "adminPanel" ? "bg-black" : "bg-[#1450A3]"} text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`
-                    : `${btn.idle} shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]`
+                    ? `${btn.key === "adminPanel" ? "bg-brand" : "bg-[#1450A3]"} text-white`
+                    : `${btn.idle}`
                 }`}
               >
                 <span>{labels[btn.key]}</span>
@@ -117,7 +118,7 @@ export function HeaderNav({
           <LanguageSwitcher />
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="cursor-pointer border-2 border-black bg-[#EAB308] p-2 text-black hover:bg-[#CA8A04] active:translate-x-[1px] active:translate-y-[1px]"
+            className="cursor-pointer border border-slate-200 bg-[#EAB308] p-2 text-black hover:bg-[#CA8A04]"
             aria-label="Toggle menu"
           >
             {isMenuOpen ? (
@@ -131,7 +132,7 @@ export function HeaderNav({
 
       {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div className="w-full space-y-4 border-t-2 border-black bg-stone-50 p-4 shadow-md lg:hidden">
+        <div className="w-full space-y-4 border-t border-slate-200 bg-stone-50 p-4 shadow-md lg:hidden">
           {/* Main sections */}
           <div className="grid grid-cols-1 gap-2">
             {TABS.map((item) => (
@@ -139,10 +140,10 @@ export function HeaderNav({
                 key={item.key}
                 href={item.href}
                 onClick={() => setIsMenuOpen(false)}
-                className={`w-full border-2 border-black px-4 py-3 text-left text-xs font-black uppercase transition-all ${
+                className={`w-full border border-slate-200 px-4 py-3 text-left text-xs font-semibold uppercase transition-all ${
                   isActive(item.href)
-                    ? "bg-[#1450A3] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                    : "bg-white text-stone-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    ? "bg-[#1450A3] text-white"
+                    : "bg-white text-stone-900"
                 }`}
               >
                 {labels[item.key]}
@@ -150,11 +151,11 @@ export function HeaderNav({
             ))}
           </div>
 
-          <hr className="my-2 border-black/10" />
+          <hr className="my-2 border-slate-200/10" />
 
           {/* Supplier Area Controls */}
           <div className="space-y-2.5">
-            <div className="flex items-center gap-1 px-1 font-mono text-xs font-black uppercase text-[#991B1B]">
+            <div className="flex items-center gap-1 px-1 font-mono text-xs font-semibold uppercase text-[#991B1B]">
               <span>{labels.supplierArea}</span>
             </div>
 
@@ -164,10 +165,10 @@ export function HeaderNav({
                   key={btn.key}
                   href={btn.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex cursor-pointer items-center justify-center rounded-none border-2 border-black px-3 py-2.5 text-center text-[10.5px] font-black uppercase leading-tight transition-all active:translate-x-[1px] active:translate-y-[1px] ${
+                  className={`flex cursor-pointer items-center justify-center rounded-md border border-slate-200 px-3 py-2.5 text-center text-[10.5px] font-semibold uppercase leading-tight transition-all ${
                     isActive(btn.href)
-                      ? `${btn.key === "adminPanel" ? "bg-black" : "bg-[#1450A3]"} text-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]`
-                      : `${btn.idle} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`
+                      ? `${btn.key === "adminPanel" ? "bg-brand" : "bg-[#1450A3]"} text-white`
+                      : `${btn.idle}`
                   }`}
                 >
                   {labels[btn.key]}

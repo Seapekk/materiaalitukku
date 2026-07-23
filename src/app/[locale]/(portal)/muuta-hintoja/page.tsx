@@ -10,7 +10,7 @@ export default async function MuutaHintojaPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pt-8">
-      <h1 className="text-center font-mono text-2xl font-black uppercase tracking-tight">
+      <h1 className="text-center font-mono text-2xl font-semibold uppercase tracking-tight">
         {t("changePrices")}
       </h1>
       <Portal priceFirst />

@@ -71,7 +71,7 @@ export default async function ProductPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-6 border-2 border-black bg-slate-50 p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:p-8">
+      <div className="mb-6 border border-slate-200 bg-slate-50 p-6 md:p-8">
         <div className="mb-2 flex flex-wrap items-center gap-3">
           {category && (
             <span className="border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-[#1450A3]">
@@ -83,7 +83,7 @@ export default async function ProductPage({
             <span className="text-sm text-gray-800">{product.unit}</span>
           </span>
         </div>
-        <h1 className="font-mono text-xl font-black uppercase leading-tight tracking-tight text-black md:text-3xl">
+        <h1 className="font-mono text-xl font-semibold uppercase leading-tight tracking-tight text-black md:text-3xl">
           {product.name}
         </h1>
         {product.description && (

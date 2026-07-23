@@ -1,36 +1,16 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
-import { Link, redirect } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { flattenMessages } from "@/lib/flatten-messages";
 import { EU_LANGUAGES, STATIC_LOCALES } from "@/lib/languages";
 import fiMessages from "../../../../../messages/fi.json";
 import { TranslationsDashboard } from "@/components/translations-dashboard";
 
-export const metadata: Metadata = { title: "Käännökset" };
+export const metadata: Metadata = { title: "Admin — Translations" };
 export const dynamic = "force-dynamic";
 
 export default async function TranslationsPage() {
-  const t = await getTranslations("adminTrans");
-  const locale = await getLocale();
+  // Auth is already gated by the /admin layout; this page only needs data.
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect({ href: "/login", locale });
-    return null;
-  }
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") {
-    redirect({ href: "/", locale });
-    return null;
-  }
 
   // Every UI text auto-registers here from the Finnish base bundle.
   const base = flattenMessages(fiMessages as Record<string, unknown>);
@@ -64,24 +44,14 @@ export default async function TranslationsPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-8 space-y-2 border-2 border-black bg-black p-8 text-white">
-        <span className="inline-block bg-white px-2 py-0.5 font-mono text-xs font-bold uppercase text-[#1450A3]">
-          Admin / i18n
-        </span>
-        <h1 className="font-mono text-2xl font-black uppercase md:text-3xl">
-          🌍 {t("title")}
-        </h1>
-        <p className="max-w-3xl text-sm text-gray-300">{t("intro")}</p>
-        <div className="pt-2">
-          <Link
-            href="/admin"
-            className="border-2 border-white bg-black px-3 py-1.5 font-mono text-xs font-black uppercase text-white hover:bg-[#1450A3]"
-          >
-            ← Admin
-          </Link>
-        </div>
-      </div>
+    <div className="admin-page">
+      <header className="mb-6">
+        <h1 className="admin-h1">Translations</h1>
+        <p className="admin-sub">
+          Every site text registers here automatically from the Finnish base.
+          Missing languages fall back to Finnish until a translation is added.
+        </p>
+      </header>
 
       <TranslationsDashboard
         baseEntries={Object.entries(base).map(([key, text]) => ({ key, text }))}

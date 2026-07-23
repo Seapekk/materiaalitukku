@@ -18,23 +18,91 @@ body {
 }
 
 @layer components {
-  /* Sharp bordered input, AI Studio style */
+  /* Flat bordered input — matches the admin theme (light, no shadow) */
   .input-brutal {
-    @apply w-full rounded-none border-2 border-black bg-white px-3 py-2 text-sm focus:outline-none focus:bg-[#EBF2FF];
+    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-brand focus:outline-none;
   }
 
-  /* Tiny mono uppercase field label */
+  /* Small field label */
   .label-mono {
-    @apply block font-mono text-[10px] font-bold uppercase tracking-wider text-gray-500;
+    @apply block text-[11px] font-medium text-slate-500;
   }
 
-  /* Hard-shadow button */
+  /* Flat button — colored fills stay, but no black border / hard shadow.
+   * Colored variants set their own bg inline; this keeps a subtle border. */
   .btn-brutal {
-    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-none border-2 border-black px-4 py-2 text-xs font-black uppercase tracking-tight shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] disabled:opacity-50;
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium tracking-tight transition-colors hover:opacity-90 disabled:opacity-50;
   }
 
-  /* Blue category chip */
+  /* Light category chip */
   .chip-cat {
-    @apply inline-block border border-blue-400 bg-blue-100 px-2 py-0.5 font-mono text-[10px] font-extrabold uppercase tracking-tight text-blue-800;
+    @apply inline-block rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium tracking-tight text-slate-600;
+  }
+
+  /* ---------------------------------------------------------------------
+   * Admin dashboard theme — deliberately NOT the public brutalist look.
+   * Light colours, no shadows, thin borders, table-first, English-only.
+   * ------------------------------------------------------------------- */
+  .admin-shell {
+    @apply min-h-screen bg-[#fbfcfd] text-slate-800;
+  }
+
+  .admin-page {
+    @apply mx-auto max-w-6xl px-4 py-8 md:px-6;
+  }
+
+  .admin-h1 {
+    @apply text-xl font-semibold text-slate-900;
+  }
+
+  .admin-sub {
+    @apply mt-1 text-sm text-slate-500;
+  }
+
+  .admin-section-title {
+    @apply mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400;
+  }
+
+  /* Flat bordered panel — no shadow */
+  .admin-card {
+    @apply rounded-md border border-slate-200 bg-white;
+  }
+
+  /* Data table */
+  .admin-table {
+    @apply w-full border-collapse text-sm;
+  }
+  .admin-table thead th {
+    @apply border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500;
+  }
+  .admin-table tbody td {
+    @apply border-b border-slate-100 px-3 py-2 align-middle text-slate-700;
+  }
+  .admin-table tbody tr:hover {
+    @apply bg-slate-50;
+  }
+
+  /* Buttons — flat, no offset shadow */
+  .admin-btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .admin-btn-primary {
+    @apply border-brand bg-brand text-white hover:bg-brand-mid;
+  }
+  .admin-btn-danger {
+    @apply border-red-200 bg-white text-red-600 hover:bg-red-50;
+  }
+
+  .admin-input {
+    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-brand focus:outline-none;
+  }
+
+  .admin-label {
+    @apply block text-[11px] font-medium text-slate-500;
+  }
+
+  /* Small status pill */
+  .admin-pill {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium;
   }
 }

@@ -1,27 +1,20 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
-import { Link, redirect } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCountryFlag } from "@/lib/country";
-import type { Message, Submission } from "@/lib/types";
+import type { Registration, Submission } from "@/lib/types";
+import { ApproveSubmissionForm } from "@/components/approve-submission-form";
+import { DashboardStats } from "@/components/dashboard-stats";
+import { getDashboardStats } from "@/lib/dashboard-stats";
 import {
   approvePriceChange,
   approveSubmission,
-  markMessageRead,
+  exportBackup,
   markRegistrationDone,
   rejectPriceChange,
   rejectSubmission,
+  setImageVerification,
 } from "./actions";
-
-type RegistrationRow = {
-  id: string;
-  reg_type: "product" | "supplier" | "transport";
-  company_name: string;
-  email: string;
-  phone: string | null;
-  payload: { details?: string };
-  created_at: string;
-};
 
 type PriceRequestRow = {
   id: string;
@@ -35,31 +28,12 @@ type PriceRequestRow = {
   } | null;
 };
 
-export const metadata: Metadata = { title: "Admin" };
+export const metadata: Metadata = { title: "Admin — Dashboard" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const t = await getTranslations("admin");
-  const locale = await getLocale();
+  // Auth is already gated by the /admin layout; this page only needs data.
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect({ href: "/login", locale });
-    return null;
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") {
-    redirect({ href: "/", locale });
-    return null;
-  }
 
   const { data: pending } = await supabase
     .from("submissions")
@@ -67,11 +41,10 @@ export default async function AdminPage() {
     .eq("status", "pending")
     .order("created_at");
 
-  const { data: messages } = await supabase
+  const { count: unreadMessages } = await supabase
     .from("messages")
-    .select("*")
-    .eq("read", false)
-    .order("created_at", { ascending: false });
+    .select("id", { count: "exact", head: true })
+    .eq("read", false);
 
   const { data: priceRequestsRaw } = await supabase
     .from("price_change_requests")
@@ -82,192 +55,166 @@ export default async function AdminPage() {
     .order("created_at");
   const priceRequests = (priceRequestsRaw ?? []) as unknown as PriceRequestRow[];
 
+  // Supplier/transport registrations are approved from their own tabs
+  // (/admin/suppliers, /admin/transport) — only "product" packages land here.
   const { data: registrationsRaw } = await supabase
     .from("registrations")
     .select("*")
     .eq("status", "pending")
+    .eq("reg_type", "product")
     .order("created_at");
-  const registrations = (registrationsRaw ?? []) as RegistrationRow[];
+  const registrations = (registrationsRaw ?? []) as Registration[];
+
+  const { data: productNamesRaw } = await supabase
+    .from("products")
+    .select("id, name, unit")
+    .order("name");
+  const productNames = productNamesRaw ?? [];
+
+  const stats = await getDashboardStats(supabase);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-8 space-y-2 border-2 border-black bg-black p-8 text-white">
-        <span className="inline-block bg-white px-2 py-0.5 font-mono text-xs font-bold uppercase text-[#991B1B]">
-          Admin / Control
-        </span>
-        <h1 className="font-mono text-2xl font-black uppercase md:text-3xl">
-          {t("title")}
-        </h1>
-        <p className="text-sm text-gray-300">{t("approveNote")}</p>
-        <div className="flex flex-wrap gap-2 pt-2">
-          <span className="border-2 border-white bg-white px-3 py-1.5 font-mono text-xs font-black uppercase text-black">
-            📥 {t("submissionsTab")} ({pending?.length ?? 0})
-          </span>
-          <Link
-            href="/admin/translations"
-            className="border-2 border-white bg-black px-3 py-1.5 font-mono text-xs font-black uppercase text-white hover:bg-[#1450A3]"
-          >
-            🌍 {t("translations")}
-          </Link>
-        </div>
-      </div>
+    <div className="admin-page">
+      <header className="mb-6">
+        <h1 className="admin-h1">Dashboard</h1>
+        <p className="admin-sub">
+          Review incoming submissions, price changes and registrations. Approving
+          a submission matches the business by email and links its offer to a
+          product name.
+        </p>
+      </header>
+
+      <DashboardStats
+        stats={stats}
+        exportBackup={exportBackup}
+        setImageVerification={setImageVerification}
+      />
 
       {priceRequests.length > 0 && (
-        <section className="mb-10">
-          <h2 className="mb-3 font-mono text-xs font-bold uppercase tracking-wider text-black">
-            💶 {t("priceRequests")} ({priceRequests.length})
+        <section className="mb-8">
+          <h2 className="admin-section-title">
+            Price change requests ({priceRequests.length})
           </h2>
-          <ul className="space-y-4">
-            {priceRequests.map((req) => (
-              <li
-                key={req.id}
-                className="flex flex-wrap items-center justify-between gap-3 border-2 border-black bg-white p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
-              >
-                <div>
-                  <p className="font-mono text-sm font-extrabold uppercase tracking-tight">
-                    {req.offer?.product?.name ?? "?"}
-                  </p>
-                  <p className="mt-1 font-mono text-[11px] font-bold uppercase text-gray-500">
-                    {req.supplier_email}
-                  </p>
-                  <p className="mt-1 font-mono text-sm">
-                    {t("currentPrice")}:{" "}
-                    <span className="text-stone-600">
-                      {req.offer?.unit_price.toFixed(2)} €
-                    </span>{" "}
-                    → {t("newPrice")}:{" "}
-                    <strong className="text-[#1450A3]">
-                      {req.new_unit_price.toFixed(2)} €/
-                      {req.offer?.product?.unit}
-                    </strong>
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <form action={approvePriceChange}>
-                    <input type="hidden" name="id" value={req.id} />
-                    <button className="btn-brutal bg-[#10B981] px-3 py-1.5 text-white hover:bg-[#059669]">
-                      {t("approve")}
-                    </button>
-                  </form>
-                  <form action={rejectPriceChange}>
-                    <input type="hidden" name="id" value={req.id} />
-                    <button className="btn-brutal bg-red-600 px-3 py-1.5 text-white hover:bg-red-700">
-                      {t("reject")}
-                    </button>
-                  </form>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="admin-card overflow-x-auto">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Business email</th>
+                  <th>Current</th>
+                  <th>Requested</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {priceRequests.map((req) => (
+                  <tr key={req.id}>
+                    <td className="font-medium text-slate-900">
+                      {req.offer?.product?.name ?? "?"}
+                    </td>
+                    <td>{req.supplier_email}</td>
+                    <td>{req.offer?.unit_price.toFixed(2)} €</td>
+                    <td className="font-medium text-brand">
+                      {req.new_unit_price.toFixed(2)} €/{req.offer?.product?.unit}
+                    </td>
+                    <td>
+                      <div className="flex justify-end gap-2">
+                        <form action={approvePriceChange}>
+                          <input type="hidden" name="id" value={req.id} />
+                          <button className="admin-btn admin-btn-primary">
+                            Approve
+                          </button>
+                        </form>
+                        <form action={rejectPriceChange}>
+                          <input type="hidden" name="id" value={req.id} />
+                          <button className="admin-btn admin-btn-danger">
+                            Reject
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 
       {registrations.length > 0 && (
-        <section className="mb-10">
-          <h2 className="mb-3 font-mono text-xs font-bold uppercase tracking-wider text-black">
-            🤝 {t("registrations")} ({registrations.length})
+        <section className="mb-8">
+          <h2 className="admin-section-title">
+            Partner registrations ({registrations.length})
           </h2>
-          <ul className="space-y-4">
+          <div className="admin-card divide-y divide-slate-100">
             {registrations.map((reg) => (
-              <li
-                key={reg.id}
-                className="border-2 border-black bg-white p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
-              >
+              <div key={reg.id} className="p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-mono text-sm font-extrabold uppercase tracking-tight">
+                    <p className="font-medium text-slate-900">
                       {reg.company_name}{" "}
-                      <span className="ml-2 border border-blue-400 bg-blue-100 px-2 py-0.5 font-mono text-[10px] font-extrabold uppercase text-blue-800">
+                      <span className="admin-pill bg-slate-100 text-slate-600">
                         {reg.reg_type === "product"
-                          ? t("regProduct")
+                          ? "Product package"
                           : reg.reg_type === "supplier"
-                            ? t("regSupplier")
-                            : t("regTransport")}
+                            ? "Supplier package"
+                            : "Route package"}
                       </span>
                     </p>
-                    <p className="mt-1 font-mono text-[11px] font-bold uppercase text-gray-500">
+                    <p className="mt-0.5 text-xs text-slate-500">
                       {reg.email}
-                      {reg.phone && <span className="normal-case"> · {reg.phone}</span>}
+                      {reg.phone && <span> · {reg.phone}</span>}
                       {" · "}
-                      {new Date(reg.created_at).toLocaleDateString(locale)}
+                      {new Date(reg.created_at).toLocaleDateString("en-GB")}
                     </p>
                   </div>
                   <form action={markRegistrationDone}>
                     <input type="hidden" name="id" value={reg.id} />
-                    <button className="btn-brutal bg-white px-3 py-1.5 text-black hover:bg-stone-100">
-                      {t("markDone")}
-                    </button>
+                    <button className="admin-btn">Mark as handled</button>
                   </form>
                 </div>
-                {reg.payload?.details && (
-                  <p className="mt-2 whitespace-pre-wrap border-t-2 border-dashed border-gray-200 pt-2 text-sm text-stone-600">
+                {typeof reg.payload?.details === "string" && reg.payload.details && (
+                  <p className="mt-2 whitespace-pre-wrap border-t border-slate-100 pt-2 text-sm text-slate-600">
                     {reg.payload.details}
                   </p>
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
-      {messages && messages.length > 0 && (
-        <section className="mb-10">
-          <h2 className="mb-3 font-mono text-xs font-bold uppercase tracking-wider text-black">
-            ✉️ {t("messages")} ({messages.length})
-          </h2>
-          <ul className="space-y-4">
-            {messages.map((msg: Message) => (
-              <li
-                key={msg.id}
-                className="border-2 border-black bg-white p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-mono text-xs font-bold uppercase text-gray-500">
-                    {msg.sender_email} ·{" "}
-                    {new Date(msg.created_at).toLocaleDateString(locale)}
-                  </p>
-                  <form action={markMessageRead}>
-                    <input type="hidden" name="id" value={msg.id} />
-                    <button className="btn-brutal bg-white px-3 py-1.5 text-black hover:bg-stone-100">
-                      {t("markRead")}
-                    </button>
-                  </form>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">
-                  {msg.message}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {(unreadMessages ?? 0) > 0 && (
+        <Link
+          href="/admin/messages"
+          className="admin-card mb-8 flex items-center justify-between gap-3 p-3 hover:bg-slate-50"
+        >
+          <span className="text-sm font-medium text-slate-700">
+            {unreadMessages} unread message{unreadMessages === 1 ? "" : "s"}
+          </span>
+          <span className="text-sm text-brand">View →</span>
+        </Link>
       )}
 
-      {pending && pending.length > 0 ? (
-        <section>
-          <h2 className="mb-3 font-mono text-xs font-bold uppercase tracking-wider text-black">
-            📥 {t("pendingSubmissions")} ({pending.length})
-          </h2>
-          <ul className="space-y-4">
+      <section>
+        <h2 className="admin-section-title">
+          Pending product submissions ({pending?.length ?? 0})
+        </h2>
+        {pending && pending.length > 0 ? (
+          <div className="admin-card divide-y divide-slate-100">
             {pending.map((sub: Submission) => (
-              <li
-                key={sub.id}
-                className="border-2 border-black bg-white p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-sm font-extrabold uppercase tracking-tight">
-                      {sub.raw_name}
+              <div key={sub.id} className="p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900">{sub.raw_name}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {getCountryFlag(sub.supplier_country)} {sub.supplier_name} (
+                      {sub.supplier_email})
                     </p>
-                    <p className="mt-1 font-mono text-[11px] font-bold uppercase text-gray-500">
-                      {t("supplier")}: {getCountryFlag(sub.supplier_country)}{" "}
-                      {sub.supplier_name}{" "}
-                      <span className="normal-case">({sub.supplier_email})</span>
-                    </p>
-                    <p className="mt-1 font-mono text-sm text-stone-700">
-                      {t("price")}:{" "}
-                      <strong className="text-[#1450A3]">
+                    <p className="mt-1 text-sm text-slate-700">
+                      <span className="font-medium text-brand">
                         {sub.raw_unit_price.toFixed(2)} €/{sub.raw_unit}
-                      </strong>
+                      </span>
                       {sub.raw_wholesale_price != null && (
                         <>
                           {" "}
@@ -276,42 +223,40 @@ export default async function AdminPage() {
                         </>
                       )}
                       {sub.raw_transport_small != null && (
-                        <> · 🚚 {sub.raw_transport_small.toFixed(2)} €</>
+                        <> · freight {sub.raw_transport_small.toFixed(2)} €</>
                       )}
                       {sub.raw_transport_bulk != null && (
                         <> / {sub.raw_transport_bulk.toFixed(2)} €</>
                       )}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    <form action={approveSubmission}>
-                      <input type="hidden" name="id" value={sub.id} />
-                      <button className="btn-brutal bg-[#10B981] px-3 py-1.5 text-white hover:bg-[#059669]">
-                        {t("approve")}
-                      </button>
-                    </form>
+                  <div className="flex shrink-0 items-start gap-2">
+                    <ApproveSubmissionForm
+                      submissionId={sub.id}
+                      rawName={sub.raw_name}
+                      products={productNames}
+                      approveAction={approveSubmission}
+                    />
                     <form action={rejectSubmission}>
                       <input type="hidden" name="id" value={sub.id} />
-                      <button className="btn-brutal bg-red-600 px-3 py-1.5 text-white hover:bg-red-700">
-                        {t("reject")}
-                      </button>
+                      <button className="admin-btn admin-btn-danger">Reject</button>
                     </form>
                   </div>
                 </div>
                 {sub.raw_description && (
-                  <p className="mt-2 whitespace-pre-wrap border-t-2 border-dashed border-gray-200 pt-2 text-sm text-stone-600">
+                  <p className="mt-2 whitespace-pre-wrap border-t border-slate-100 pt-2 text-sm text-slate-600">
                     {sub.raw_description}
                   </p>
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
-        </section>
-      ) : (
-        <p className="border-2 border-black bg-white p-16 text-center font-mono text-sm font-bold uppercase text-gray-500">
-          {t("empty")}
-        </p>
-      )}
+          </div>
+        ) : (
+          <div className="admin-card p-10 text-center text-sm text-slate-400">
+            Nothing waiting for review.
+          </div>
+        )}
+      </section>
     </div>
   );
 }

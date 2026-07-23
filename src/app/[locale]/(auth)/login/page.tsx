@@ -13,12 +13,12 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-12">
-      <h1 className="mb-6 font-mono text-2xl font-black uppercase tracking-tight">
+      <h1 className="mb-6 font-mono text-2xl font-semibold uppercase tracking-tight">
         🔐 {t("loginTitle")}
       </h1>
       <form
         action={formAction}
-        className="space-y-4 border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+        className="space-y-4 border border-slate-200 bg-white p-6"
       >
         <label className="block">
           <span className="label-mono">{t("email")}</span>
@@ -45,7 +45,7 @@ export default function LoginPage() {
         )}
         <button
           disabled={pending}
-          className="btn-brutal w-full bg-[#1450A3] py-2.5 text-white hover:bg-black"
+          className="btn-brutal w-full bg-[#1450A3] py-2.5 text-white hover:bg-brand-mid"
         >
           {t("loginButton")} →
         </button>

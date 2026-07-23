@@ -44,7 +44,11 @@
     "password": "Password",
     "loginButton": "Log in",
     "invalidCredentials": "Wrong email or password.",
-    "genericError": "Something went wrong. Please try again."
+    "genericError": "Something went wrong. Please try again.",
+    "siseneTitle": "Admin sign-in",
+    "siseneSubtitle": "Sign in with your Google account to continue to the dashboard.",
+    "googleButton": "Continue with Google",
+    "oauthFailed": "Google sign-in failed. Please try again."
   },
   "products": {
     "title": "Price comparison",
@@ -130,7 +134,27 @@
     "markDone": "Mark as handled",
     "regProduct": "Product package (A)",
     "regSupplier": "Supplier package (B)",
-    "regTransport": "Route package (C)"
+    "regTransport": "Route package (C)",
+    "matchProductPlaceholder": "Match existing product…",
+    "newProduct": "New product",
+    "dashboardStats": "Dashboard",
+    "statProducts": "Products",
+    "statProductsActive": "Active",
+    "statProductsHidden": "Hidden",
+    "statDuplicates": "Duplicates",
+    "statErrors": "Errors",
+    "statTranslations": "Languages complete",
+    "statTranslationKeys": "Translation keys",
+    "statApiKeys": "API keys",
+    "statBackup": "Backup",
+    "duplicatesWarning": "These product names appear more than once — merge submissions onto one of them instead of approving as new:",
+    "more": "more",
+    "configured": "Configured",
+    "missing": "Missing",
+    "backupNote": "Downloads products, offers, suppliers, transport companies and categories as one JSON file.",
+    "backupButton": "Download backup",
+    "backupPending": "Exporting…",
+    "backupError": "Backup export failed."
   },
   "footer": {
     "rights": "All rights reserved.",

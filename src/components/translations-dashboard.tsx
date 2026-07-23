@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import {
   aiTranslateMissing,
   exportTranslationsCsv,
@@ -10,6 +9,11 @@ import {
   saveTranslations,
   type TransActionState,
 } from "@/app/[locale]/admin/translations/actions";
+import {
+  TRANSLATION_ENGINES,
+  DEFAULT_ENGINE,
+  type TranslationEngine,
+} from "@/lib/translate";
 
 type Props = {
   baseEntries: { key: string; text: string }[];
@@ -17,18 +21,26 @@ type Props = {
   languages: { code: string; flag: string; name: string; filled: number }[];
 };
 
+const ERRORS: Record<string, string> = {
+  aiFailed:
+    "AI translation was aborted due to an error — nothing was written to the database.",
+  aiNoKey: "GEMINI_API_KEY is missing from .env.local — AI translation is disabled.",
+  genericError: "Something went wrong. Please try again.",
+};
+const errMsg = (code: string) => ERRORS[code] ?? ERRORS.genericError;
+
 export function TranslationsDashboard({
   baseEntries,
   translations,
   languages,
 }: Props) {
-  const t = useTranslations("adminTrans");
   const router = useRouter();
   const [lang, setLang] = useState(languages[0]?.code ?? "et");
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [missingOnly, setMissingOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [engine, setEngine] = useState<TranslationEngine>(DEFAULT_ENGINE);
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +64,7 @@ export function TranslationsDashboard({
 
   const handleResult = (res: TransActionState, doneMsg?: string) => {
     if (res.error) {
-      setNotice(t(res.error));
+      setNotice(errMsg(res.error));
     } else if (doneMsg) {
       setNotice(doneMsg);
       setEdits({});
@@ -77,22 +89,22 @@ export function TranslationsDashboard({
             <button
               key={l.code}
               onClick={() => changeLang(l.code)}
-              className={`border-2 px-2.5 py-1.5 font-mono text-xs font-extrabold uppercase transition-all ${
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 active
-                  ? "border-black bg-[#1450A3] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                  : "border-stone-200 bg-[#FAF8F5] text-stone-800 hover:border-black"
+                  ? "bg-brand text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               {l.flag} {l.code}{" "}
               <span
                 className={
                   active
-                    ? "text-blue-200"
+                    ? "text-blue-100"
                     : pct === 100
-                      ? "text-emerald-700"
+                      ? "text-emerald-600"
                       : pct === 0
-                        ? "text-red-700"
-                        : "text-amber-700"
+                        ? "text-red-500"
+                        : "text-amber-600"
                 }
               >
                 {pct}%
@@ -103,25 +115,25 @@ export function TranslationsDashboard({
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 border-2 border-black bg-white p-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-        <span className="font-mono text-xs font-bold uppercase text-gray-500">
-          {t("language")}: {langName} · {t("missingCount", { count: missingCount })}
+      <div className="admin-card flex flex-wrap items-center gap-2 p-3">
+        <span className="text-xs font-medium text-slate-500">
+          {langName} · {missingCount} missing
         </span>
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="🔍"
-          className="input-brutal h-9 w-40 flex-none py-1"
+          placeholder="Search…"
+          className="admin-input h-9 w-40 flex-none py-1"
         />
-        <label className="flex cursor-pointer select-none items-center gap-1.5 font-mono text-[10px] font-bold uppercase text-gray-700">
+        <label className="flex cursor-pointer select-none items-center gap-1.5 text-xs text-slate-600">
           <input
             type="checkbox"
             checked={missingOnly}
             onChange={(e) => setMissingOnly(e.target.checked)}
-            className="h-3.5 w-3.5 accent-[#1450A3]"
+            className="h-3.5 w-3.5 accent-brand"
           />
-          {t("missingOnly")}
+          Missing only
         </label>
         <div className="ml-auto flex flex-wrap gap-2">
           <button
@@ -143,16 +155,16 @@ export function TranslationsDashboard({
                 }
               })
             }
-            className="btn-brutal bg-white px-3 py-1.5 text-black hover:bg-stone-100"
+            className="admin-btn"
           >
-            ⬇ {t("exportCsv")}
+            Export CSV
           </button>
           <button
             disabled={pending}
             onClick={() => fileRef.current?.click()}
-            className="btn-brutal bg-white px-3 py-1.5 text-black hover:bg-stone-100"
+            className="admin-btn"
           >
-            ⬆ {t("importCsv")}
+            Import CSV
           </button>
           <input
             ref={fileRef}
@@ -166,65 +178,72 @@ export function TranslationsDashboard({
               startTransition(async () => {
                 const text = await file.text();
                 const res = await importTranslationsCsv(text);
-                handleResult(res, t("imported", { count: res.count ?? 0 }));
+                handleResult(res, `CSV imported: ${res.count ?? 0} translation(s) updated.`);
               });
             }}
           />
+          <select
+            value={engine}
+            onChange={(e) => setEngine(e.target.value as TranslationEngine)}
+            className="admin-input h-9 w-52 cursor-pointer"
+            title="Translation engine"
+          >
+            {TRANSLATION_ENGINES.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.label}
+              </option>
+            ))}
+          </select>
           <button
             disabled={pending || missingCount === 0}
             onClick={() =>
               startTransition(async () => {
-                const res = await aiTranslateMissing(lang);
+                const res = await aiTranslateMissing(lang, engine);
                 if (res.success === "nothingMissing") {
-                  setNotice(t("nothingMissing"));
+                  setNotice("All texts are already translated for this language.");
                 } else {
                   handleResult(
                     res,
-                    t("aiDone", { count: res.count ?? 0, lang: langName })
+                    `AI translated ${res.count ?? 0} text(s) into ${langName}.`
                   );
                 }
               })
             }
-            className="btn-brutal bg-[#1450A3] px-3 py-1.5 text-white hover:bg-black"
+            className="admin-btn admin-btn-primary"
           >
-            🤖 {t("aiTranslate")}
+            AI translate missing
           </button>
         </div>
       </div>
 
       {notice && (
-        <p className="border-2 border-black bg-yellow-50 px-3 py-2 font-mono text-xs font-bold uppercase">
+        <p className="admin-card border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           {notice}
         </p>
       )}
 
       {/* Editor table */}
-      <div className="border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-        <div className="grid grid-cols-12 border-b-2 border-black bg-black p-3 font-mono text-xs font-bold uppercase tracking-wide text-white">
-          <div className="col-span-3 p-1">{t("key")}</div>
-          <div className="col-span-4 border-l border-gray-800 p-1 pl-3">
-            {t("baseText")}
+      <div className="admin-card overflow-hidden">
+        <div className="grid grid-cols-12 border-b border-slate-200 bg-slate-50 p-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <div className="col-span-3 p-1">Key</div>
+          <div className="col-span-4 border-l border-slate-200 p-1 pl-3">
+            Base text (FI)
           </div>
-          <div className="col-span-5 border-l border-gray-800 p-1 pl-3">
-            {t("translation")} ({lang.toUpperCase()})
+          <div className="col-span-5 border-l border-slate-200 p-1 pl-3">
+            Translation ({lang.toUpperCase()})
           </div>
         </div>
-        <div className="max-h-[60vh] divide-y divide-stone-200 overflow-y-auto">
-          {visible.map(({ key, text }, index) => {
+        <div className="max-h-[60vh] divide-y divide-slate-100 overflow-y-auto">
+          {visible.map(({ key, text }) => {
             const value = edits[key] ?? current[key] ?? "";
             const isMissing = !current[key] && !(edits[key] ?? "").trim();
             return (
-              <div
-                key={key}
-                className={`grid grid-cols-12 items-center p-2 ${
-                  index % 2 === 0 ? "bg-white" : "bg-slate-50"
-                }`}
-              >
-                <div className="col-span-3 break-all p-1 font-mono text-[10px] font-bold text-gray-500">
-                  {isMissing && <span className="mr-1 text-red-600">●</span>}
+              <div key={key} className="grid grid-cols-12 items-center p-2">
+                <div className="col-span-3 break-all p-1 text-[11px] font-medium text-slate-500">
+                  {isMissing && <span className="mr-1 text-red-500">●</span>}
                   {key}
                 </div>
-                <div className="col-span-4 p-1 pl-3 text-xs text-stone-700">
+                <div className="col-span-4 p-1 pl-3 text-xs text-slate-600">
                   {text}
                 </div>
                 <div className="col-span-5 p-1 pl-3">
@@ -233,15 +252,15 @@ export function TranslationsDashboard({
                     onChange={(e) =>
                       setEdits((prev) => ({ ...prev, [key]: e.target.value }))
                     }
-                    className="w-full border-2 border-stone-300 bg-white px-2 py-1.5 text-xs focus:border-black focus:outline-none"
+                    className="admin-input h-8 py-1 text-xs"
                   />
                 </div>
               </div>
             );
           })}
         </div>
-        <div className="flex items-center justify-between border-t-2 border-black bg-slate-50 p-3">
-          <span className="font-mono text-xs text-gray-500">
+        <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 p-3">
+          <span className="text-xs text-slate-500">
             {visible.length} / {total}
           </span>
           <button
@@ -253,12 +272,12 @@ export function TranslationsDashboard({
                   text,
                 }));
                 const res = await saveTranslations(lang, entries);
-                handleResult(res, t("saved"));
+                handleResult(res, "Translations saved.");
               })
             }
-            className="btn-brutal bg-[#10B981] px-4 py-2 text-white hover:bg-[#059669]"
+            className="admin-btn admin-btn-primary"
           >
-            💾 {t("save")} ({Object.keys(edits).length})
+            Save changes ({Object.keys(edits).length})
           </button>
         </div>
       </div>

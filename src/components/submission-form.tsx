@@ -16,7 +16,7 @@ export function SubmissionForm({ categories }: { categories: Category[] }) {
 
   if (state.success) {
     return (
-      <p className="border-2 border-black bg-green-100 p-4 font-mono text-sm font-bold uppercase text-green-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+      <p className="border border-slate-200 bg-green-100 p-4 font-mono text-sm font-bold uppercase text-green-800">
         🟢 {t("submitted")}
       </p>
     );
@@ -25,7 +25,7 @@ export function SubmissionForm({ categories }: { categories: Category[] }) {
   return (
     <form
       action={formAction}
-      className="space-y-5 border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+      className="space-y-5 border border-slate-200 bg-white p-6"
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">

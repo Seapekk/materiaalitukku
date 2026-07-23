@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   ExternalLink,
@@ -8,14 +8,11 @@ import {
   Search,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { createClient } from "@/lib/supabase/client";
 import { getCountryFlag, getCountryName, getVatRate } from "@/lib/country";
+import { offerShowsSupplier } from "@/lib/offer-source";
 import { calculateOfferLanded } from "@/lib/pricing";
-import {
-  DEST_SURCHARGE,
-  ITEMS_PER_PAGE,
-  TRANSPORT_BASE,
-} from "@/lib/hinta-constants";
+import { ITEMS_PER_PAGE } from "@/lib/hinta-constants";
+import { FI_CITY_NAMES, estimateUnitFreight } from "@/lib/transport-pricing";
 import {
   categoryName,
   type Category,
@@ -41,12 +38,10 @@ type Comp = {
 
 type ProductRow = Product & { comp: Comp; topCat: string | null };
 
-// Per-unit freight exactly like the original: (FTL base + surcharge) / 1000.
+// Per-unit freight, now distance-based: EU origin -> the chosen Finnish city.
 function unitFreight(country: string, destination: string): number {
   if (country === "fi") return 0;
-  const base = TRANSPORT_BASE[country] ?? 1200;
-  const surcharge = DEST_SURCHARGE[destination] ?? 0;
-  return (base + surcharge) / 1000;
+  return estimateUnitFreight(country, destination, true);
 }
 
 function supplierWebsite(s: Supplier | undefined): string {
@@ -56,15 +51,32 @@ function supplierWebsite(s: Supplier | undefined): string {
   return domain ? `https://www.${domain}` : "#";
 }
 
-export function Hinta() {
+// Localized product name: the translation for the active locale, else Finnish.
+function localizedName(p: Product, locale: string): string {
+  if (locale === "fi") return p.name;
+  return p.name_translations?.[locale]?.trim() || p.name;
+}
+
+export function Hinta({
+  initialProducts,
+  initialOffers,
+  initialSuppliers,
+  initialCategories,
+}: {
+  initialProducts: Product[];
+  initialOffers: Offer[];
+  initialSuppliers: Supplier[];
+  initialCategories: Category[];
+}) {
   const t = useTranslations("hinta");
   const locale = useLocale();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  // Data is provided by the server component (no client fetch / spinner).
+  const isLoading = false;
+  const [products] = useState<Product[]>(initialProducts);
+  const [offers] = useState<Offer[]>(initialOffers);
+  const [suppliers] = useState<Supplier[]>(initialSuppliers);
+  const [categories] = useState<Category[]>(initialCategories);
 
   // Filters — same set as the original hinta view.
   const [globalSearch, setGlobalSearch] = useState("");
@@ -81,23 +93,6 @@ export function Hinta() {
   );
   const [modalIncludeTransport, setModalIncludeTransport] = useState(true);
   const [modalQuantity, setModalQuantity] = useState(1000);
-
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const [p, o, s, c] = await Promise.all([
-        supabase.from("products").select("*").eq("status", "active").order("name"),
-        supabase.from("offers").select("*").eq("status", "active"),
-        supabase.from("suppliers").select("*"),
-        supabase.from("categories").select("*").order("sort_order"),
-      ]);
-      setProducts((p.data as Product[]) ?? []);
-      setOffers((o.data as Offer[]) ?? []);
-      setSuppliers((s.data as Supplier[]) ?? []);
-      setCategories((c.data as Category[]) ?? []);
-      setIsLoading(false);
-    })();
-  }, []);
 
   const supplierById = useMemo(
     () => new Map(suppliers.map((s) => [s.id, s])),
@@ -228,7 +223,7 @@ export function Hinta() {
       {/* STICKY CONTROL PANEL (FULL WIDTH) */}
       <div className="sticky top-[85px] z-20 space-y-3 bg-[#F3F4F6] pb-3 pt-1">
         {/* MASTER SEARCH & FILTER CARD */}
-        <div className="space-y-4 border-2 border-black bg-white p-5 font-sans shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div className="space-y-4 border border-slate-200 bg-white p-5 font-sans">
           <div className="flex flex-col gap-4">
             {/* Row 1: Search, Sort, Location, Category */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
@@ -250,14 +245,14 @@ export function Hinta() {
                     setGlobalSearch(e.target.value);
                     setTablePage(1);
                   }}
-                  className="h-11 w-full border-2 border-black pl-10 pr-16 font-sans text-xs placeholder:text-gray-400 focus:outline-none md:text-sm"
+                  className="h-11 w-full border border-slate-200 pl-10 pr-16 font-sans text-xs placeholder:text-gray-400 focus:outline-none md:text-sm"
                 />
               </div>
 
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="h-11 cursor-pointer border-2 border-black bg-slate-50 px-3 font-mono text-xs font-bold focus:outline-none"
+                className="h-11 cursor-pointer border border-slate-200 bg-slate-50 px-3 font-mono text-xs font-bold focus:outline-none"
               >
                 <option value="savings">{t("sortSavings")}</option>
                 <option value="price-asc">{t("sortPriceAsc")}</option>
@@ -268,9 +263,9 @@ export function Hinta() {
               <select
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                className="h-11 cursor-pointer border-2 border-black bg-white px-3 font-mono text-xs font-bold focus:outline-none"
+                className="h-11 cursor-pointer border border-slate-200 bg-white px-3 font-mono text-xs font-bold focus:outline-none"
               >
-                {Object.keys(DEST_SURCHARGE).map((city) => (
+                {FI_CITY_NAMES.map((city) => (
                   <option key={city} value={city}>
                     {t("destOption", { city })}
                   </option>
@@ -283,7 +278,7 @@ export function Hinta() {
                   setCat(e.target.value);
                   setTablePage(1);
                 }}
-                className="h-11 cursor-pointer border-2 border-black bg-white px-3 font-mono text-xs font-bold focus:outline-none"
+                className="h-11 cursor-pointer border border-slate-200 bg-white px-3 font-mono text-xs font-bold focus:outline-none"
               >
                 <option value="all">{t("allCategories")}</option>
                 {topCats.map((c) => (
@@ -301,7 +296,7 @@ export function Hinta() {
                   type="checkbox"
                   checked={includeTransport}
                   onChange={(e) => setIncludeTransport(e.target.checked)}
-                  className="h-5 w-5 cursor-pointer border-2 border-black accent-[#1450A3] focus:ring-0"
+                  className="h-5 w-5 cursor-pointer border border-slate-200 accent-[#1450A3] focus:ring-0"
                 />
                 <span className="text-xs font-extrabold uppercase tracking-tight transition-colors group-hover:text-[#1450A3]">
                   {t("freightIncluded")}
@@ -316,7 +311,7 @@ export function Hinta() {
                     setSavingsOnly(e.target.checked);
                     setTablePage(1);
                   }}
-                  className="h-5 w-5 cursor-pointer border-2 border-black accent-[#1450A3] focus:ring-0"
+                  className="h-5 w-5 cursor-pointer border border-slate-200 accent-[#1450A3] focus:ring-0"
                 />
                 <span className="text-xs font-extrabold uppercase tracking-tight transition-colors group-hover:text-[#1450A3]">
                   {t("savingsOnly")}
@@ -345,8 +340,8 @@ export function Hinta() {
                 }}
                 className={`cursor-pointer border-2 px-3 py-1.5 text-xs font-extrabold uppercase tracking-tight transition-all ${
                   cat === "all"
-                    ? "-translate-x-0.5 -translate-y-0.5 border-black bg-[#1450A3] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                    : "border-stone-200 bg-[#FAF8F5] text-stone-800 hover:border-black hover:bg-stone-50"
+                    ? "-translate-x-0.5 -translate-y-0.5 border-slate-200 bg-[#1450A3] text-white"
+                    : "border-stone-200 bg-[#FAF8F5] text-stone-800 hover:border-slate-200 hover:bg-stone-50"
                 }`}
               >
                 {t("allProducts")} ({processedProducts.length})
@@ -365,8 +360,8 @@ export function Hinta() {
                     }}
                     className={`cursor-pointer border-2 px-3 py-1.5 text-xs font-extrabold uppercase tracking-tight transition-all ${
                       isSelected
-                        ? "-translate-x-0.5 -translate-y-0.5 border-black bg-[#1450A3] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                        : "border-stone-200 bg-[#FAF8F5] text-stone-800 hover:border-black hover:bg-stone-50"
+                        ? "-translate-x-0.5 -translate-y-0.5 border-slate-200 bg-[#1450A3] text-white"
+                        : "border-stone-200 bg-[#FAF8F5] text-stone-800 hover:border-slate-200 hover:bg-stone-50"
                     }`}
                   >
                     {categoryName(c, locale)} ({count})
@@ -379,14 +374,14 @@ export function Hinta() {
 
         {/* ACTIVE FILTERS CHIP BAR */}
         {activeTags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-2 border-black bg-yellow-50 p-3 text-xs font-semibold">
+          <div className="flex flex-wrap items-center gap-2 border border-slate-200 bg-yellow-50 p-3 text-xs font-semibold">
             <span className="py-1 font-mono text-[10px] font-bold uppercase text-gray-500">
               {t("activeFilters")}
             </span>
             {activeTags.map((tag, i) => (
               <div
                 key={i}
-                className="flex select-none items-center gap-1.5 border border-black bg-white px-2 py-1 font-sans"
+                className="flex select-none items-center gap-1.5 border border-slate-200 bg-white px-2 py-1 font-sans"
               >
                 <span>{tag.label}</span>
                 <button
@@ -408,9 +403,9 @@ export function Hinta() {
       </div>
 
       {/* MAIN TABLE */}
-      <div className="border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+      <div className="border border-slate-200 bg-white">
         {/* Table Header */}
-        <div className="grid select-none grid-cols-12 border-b-2 border-black bg-black p-3 text-left font-mono text-xs font-bold uppercase tracking-wide text-white">
+        <div className="grid select-none grid-cols-12 border-b border-slate-200 bg-slate-50 p-3 text-left font-mono text-xs font-bold uppercase tracking-wide text-slate-500">
           <div className="col-span-4 p-2 lg:col-span-5">{t("colProduct")}</div>
           <div className="col-span-2 border-l border-gray-800 p-2 text-right lg:col-span-2">
             {t("colFi")}
@@ -437,7 +432,7 @@ export function Hinta() {
             </p>
             <button
               onClick={resetFilters}
-              className="cursor-pointer border-2 border-black bg-black px-4 py-2 text-xs font-extrabold uppercase text-white transition-colors hover:bg-white hover:text-black"
+              className="cursor-pointer border border-slate-200 bg-brand px-4 py-2 text-xs font-extrabold uppercase text-white transition-colors hover:bg-brand-mid"
             >
               {t("resetFilters")}
             </button>
@@ -478,8 +473,8 @@ export function Hinta() {
                   }`}
                 >
                   <div className="col-span-4 flex gap-4 p-2 lg:col-span-5">
-                    {p.image_url && (
-                      <div className="h-16 w-16 shrink-0 border-2 border-black bg-white">
+                    {p.image_url && p.image_status !== "blocked" && (
+                      <div className="h-16 w-16 shrink-0 border border-slate-200 bg-white">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={p.image_url}
@@ -490,7 +485,7 @@ export function Hinta() {
                     )}
                     <div className="space-y-1">
                       <span className="block text-sm font-bold uppercase tracking-tight text-gray-950">
-                        {p.name}
+                        {localizedName(p, locale)}
                       </span>
                       {p.description && (
                         <p className="line-clamp-2 font-sans text-[10px] text-gray-600">
@@ -530,7 +525,7 @@ export function Hinta() {
                     {comp.bestEu ? (
                       <div className="text-right">
                         <div className="flex flex-wrap items-center justify-end gap-1.5 font-mono">
-                          <span className="select-none border border-black/10 bg-slate-100 px-1 py-0.5 text-xs font-bold uppercase">
+                          <span className="select-none border border-slate-200/10 bg-slate-100 px-1 py-0.5 text-xs font-bold uppercase">
                             {getCountryFlag(comp.bestEu.country)}{" "}
                             {comp.bestEu.country.toUpperCase()}
                           </span>
@@ -580,7 +575,7 @@ export function Hinta() {
         )}
 
         {/* Table Footer */}
-        <div className="flex select-none flex-col items-center justify-between gap-4 border-t-2 border-black bg-slate-50 p-4 font-mono text-xs text-gray-500 md:flex-row">
+        <div className="flex select-none flex-col items-center justify-between gap-4 border-t border-slate-200 bg-slate-50 p-4 font-mono text-xs text-gray-500 md:flex-row">
           <div className="space-y-1">
             <div>
               {t("showing", {
@@ -600,10 +595,10 @@ export function Hinta() {
               <button
                 onClick={() => setTablePage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className={`cursor-pointer border-2 border-black px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-tight transition-all ${
+                className={`cursor-pointer border border-slate-200 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-tight transition-all ${
                   page === 1
                     ? "cursor-not-allowed border-stone-300 bg-gray-200 text-stone-400 opacity-40"
-                    : "bg-white text-stone-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-stone-100 active:translate-x-[1px] active:translate-y-[1px]"
+                    : "bg-white text-stone-900 hover:bg-stone-100"
                 }`}
               >
                 {t("prev")}
@@ -616,9 +611,9 @@ export function Hinta() {
                   <button
                     key={pagNum}
                     onClick={() => setTablePage(pagNum)}
-                    className={`flex h-7 w-7 cursor-pointer items-center justify-center border-2 border-black text-xs font-extrabold transition-all ${
+                    className={`flex h-7 w-7 cursor-pointer items-center justify-center border border-slate-200 text-xs font-extrabold transition-all ${
                       isCurrent
-                        ? "bg-[#1450A3] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                        ? "bg-[#1450A3] text-white"
                         : "bg-white text-stone-900 hover:bg-stone-50"
                     }`}
                   >
@@ -630,10 +625,10 @@ export function Hinta() {
               <button
                 onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className={`cursor-pointer border-2 border-black px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-tight transition-all ${
+                className={`cursor-pointer border border-slate-200 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-tight transition-all ${
                   page === totalPages
                     ? "cursor-not-allowed border-stone-300 bg-gray-200 text-stone-400 opacity-40"
-                    : "bg-white text-stone-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-stone-100 active:translate-x-[1px] active:translate-y-[1px]"
+                    : "bg-white text-stone-900 hover:bg-stone-100"
                 }`}
               >
                 {t("next")}
@@ -650,36 +645,39 @@ export function Hinta() {
           onClick={() => setSelectedProduct(null)}
         >
           <div
-            className="flex w-full max-w-6xl cursor-default flex-col overflow-hidden border-4 border-black bg-white text-stone-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+            className="flex w-full max-w-6xl cursor-default flex-col overflow-hidden border-4 border-slate-200 bg-white text-stone-900"
             onClick={(e) => e.stopPropagation()}
           >
             {/* MODAL HEADER */}
-            <div className="flex flex-col justify-between gap-4 border-b-4 border-black bg-slate-50 p-6 md:flex-row md:items-center md:px-8">
+            <div className="flex flex-col justify-between gap-4 border-b-4 border-slate-200 bg-slate-50 p-6 md:flex-row md:items-center md:px-8">
               <div>
                 <div
-                  className="mb-3 inline-flex items-center gap-4 border-2 border-black p-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  className="mb-3 inline-flex items-center gap-4 border border-slate-200 p-2"
                   style={{
                     backgroundImage:
                       "repeating-linear-gradient(45deg, #FFEDD5, #FFEDD5 10px, #FEE2E2 10px, #FEE2E2 20px)",
                   }}
                 >
-                  <span className="border-2 border-black bg-blue-100 px-3 py-1 font-mono text-sm font-black uppercase text-[#1450A3]">
+                  <span className="border border-slate-200 bg-blue-100 px-3 py-1 font-mono text-sm font-semibold uppercase text-[#1450A3]">
                     {categoryName(
                       catBySlug.get(selectedProduct.topCat ?? ""),
                       locale
                     ) || "—"}
                   </span>
-                  <span className="border-2 border-black bg-white px-3 py-1 font-mono text-sm font-black uppercase text-black">
+                  <span className="border border-slate-200 bg-white px-3 py-1 font-mono text-sm font-semibold uppercase text-black">
                     {t("unit")}: {selectedProduct.unit}
                   </span>
                 </div>
-                <h2 className="font-mono text-xl font-black uppercase leading-tight tracking-tight text-black md:text-3xl">
-                  {selectedProduct.name}
+                <h2 className="font-mono text-xl font-semibold uppercase leading-tight tracking-tight text-black md:text-3xl">
+                  {localizedName(selectedProduct, locale)}
                 </h2>
-                {(selectedProduct.image_url || selectedProduct.description) && (
+                {((selectedProduct.image_url &&
+                  selectedProduct.image_status !== "blocked") ||
+                  selectedProduct.description) && (
                   <div className="mt-4 flex gap-4">
-                    {selectedProduct.image_url && (
-                      <div className="h-24 w-24 shrink-0 border-2 border-black bg-white">
+                    {selectedProduct.image_url &&
+                      selectedProduct.image_status !== "blocked" && (
+                      <div className="h-24 w-24 shrink-0 border border-slate-200 bg-white">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={selectedProduct.image_url}
@@ -700,19 +698,19 @@ export function Hinta() {
               <div className="flex flex-shrink-0 flex-col items-end gap-3">
                 <button
                   onClick={() => setSelectedProduct(null)}
-                  className="cursor-pointer border-2 border-black bg-white px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest text-[#0D1117] transition-colors hover:bg-black hover:text-white"
+                  className="cursor-pointer border border-slate-200 bg-white px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-[#0D1117] transition-colors hover:bg-slate-100"
                 >
                   {t("closeView")}
                 </button>
                 <div
-                  className="flex items-center gap-4 border-2 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  className="flex items-center gap-4 border border-slate-200 p-3"
                   style={{
                     backgroundImage:
                       "repeating-linear-gradient(45deg, #FFEDD5, #FFEDD5 10px, #FEE2E2 10px, #FEE2E2 20px)",
                   }}
                 >
-                  <div className="flex h-[36px] items-center border-2 border-black bg-white">
-                    <span className="flex h-full items-center border-r-2 border-black bg-slate-100 px-3 font-mono text-[11px] font-bold uppercase text-gray-500">
+                  <div className="flex h-[36px] items-center border border-slate-200 bg-white">
+                    <span className="flex h-full items-center border-r border-slate-200 bg-slate-100 px-3 font-mono text-[11px] font-bold uppercase text-gray-500">
                       {t("quantity")}
                     </span>
                     <input
@@ -722,15 +720,15 @@ export function Hinta() {
                       onChange={(e) =>
                         setModalQuantity(Math.max(1, Number(e.target.value) || 1))
                       }
-                      className="h-full w-24 px-3 font-mono text-sm font-black focus:outline-none"
+                      className="h-full w-24 px-3 font-mono text-sm font-semibold focus:outline-none"
                     />
                   </div>
-                  <label className="group flex h-[36px] cursor-pointer select-none items-center gap-2 border-2 border-black bg-white px-3 transition-colors hover:bg-slate-100">
+                  <label className="group flex h-[36px] cursor-pointer select-none items-center gap-2 border border-slate-200 bg-white px-3 transition-colors hover:bg-slate-100">
                     <input
                       type="checkbox"
                       checked={modalIncludeTransport}
                       onChange={(e) => setModalIncludeTransport(e.target.checked)}
-                      className="h-4 w-4 cursor-pointer border-2 border-black accent-[#1450A3] focus:ring-0"
+                      className="h-4 w-4 cursor-pointer border border-slate-200 accent-[#1450A3] focus:ring-0"
                     />
                     <span className="text-[11px] font-bold uppercase text-stone-800 group-hover:text-[#1450A3]">
                       {t("inclFreightEstimate", { dest: destination })}
@@ -745,16 +743,16 @@ export function Hinta() {
               <table className="w-full min-w-[800px] border-collapse text-left">
                 <thead className="bg-[#1450A3] text-white">
                   <tr>
-                    <th className="w-[35%] border-b-4 border-r-2 border-black p-4 font-mono text-[11px] font-bold uppercase tracking-wider">
+                    <th className="w-[35%] border-b-4 border-r border-slate-200 p-4 font-mono text-[11px] font-bold uppercase tracking-wider">
                       {t("colSupplierCountry")}
                     </th>
-                    <th className="w-[25%] border-b-4 border-r-2 border-black p-4 font-mono text-[11px] font-bold uppercase tracking-wider">
+                    <th className="w-[25%] border-b-4 border-r border-slate-200 p-4 font-mono text-[11px] font-bold uppercase tracking-wider">
                       {t("colPricePerUnit")}
                     </th>
-                    <th className="w-[20%] border-b-4 border-r-2 border-black p-4 font-mono text-[11px] font-bold uppercase tracking-wider">
+                    <th className="w-[20%] border-b-4 border-r border-slate-200 p-4 font-mono text-[11px] font-bold uppercase tracking-wider">
                       {t("colSaving")}
                     </th>
-                    <th className="w-[20%] border-b-4 border-black p-4 text-center font-mono text-[11px] font-bold uppercase tracking-wider">
+                    <th className="w-[20%] border-b-4 border-slate-200 p-4 text-center font-mono text-[11px] font-bold uppercase tracking-wider">
                       {t("colAction")}
                     </th>
                   </tr>
@@ -768,21 +766,37 @@ export function Hinta() {
                       const supplier = supplierById.get(offer.supplier_id);
                       const country = (supplier?.country ?? "ee").toLowerCase();
                       const calc = calculateOfferLanded(offer, modalQuantity);
+                      // Prefer the supplier's own freight; if they gave none,
+                      // fall back to the distance estimate to the chosen city.
+                      let perUnitFreight = calc.freight / modalQuantity;
+                      if (perUnitFreight === 0 && country !== "fi") {
+                        perUnitFreight = estimateUnitFreight(
+                          country,
+                          destination,
+                          modalQuantity > 10
+                        );
+                      }
                       const landedPerUnit = modalIncludeTransport
-                        ? calc.landedPerUnit
+                        ? calc.unitPrice + perUnitFreight
                         : calc.unitPrice;
-                      const isWholesale = offer.min_wholesale_qty
-                        ? modalQuantity >= offer.min_wholesale_qty
-                        : false;
+                      // A discount tier (structured price_tiers or the legacy
+                      // wholesale break) is active when the effective unit price
+                      // is below the 1-piece price.
+                      const isWholesale = calc.unitPrice < offer.unit_price;
+                      // Spec: hide supplier identity for admin-added / scraped
+                      // offers — public users only see the country.
+                      const showSupplier =
+                        !!supplier && offerShowsSupplier(offer.source);
                       return {
                         offer,
                         supplier,
+                        showSupplier,
                         country,
-                        label: supplier
-                          ? `${supplier.name} (${country.toUpperCase()})`
+                        label: showSupplier
+                          ? `${supplier!.name} (${country.toUpperCase()})`
                           : `(${country.toUpperCase()})`,
                         landedPerUnit,
-                        unitFreight: calc.freight / modalQuantity,
+                        unitFreight: perUnitFreight,
                         isBenchmark: country === "fi",
                         tier: isWholesale ? "wholesale" : "single",
                       };
@@ -841,9 +855,9 @@ export function Hinta() {
                       return (
                         <tr
                           key={`${row.country}-${idx}`}
-                          className={`${bgClass} border-b-2 border-black transition-colors hover:bg-[#E8F0FE]`}
+                          className={`${bgClass} border-b border-slate-200 transition-colors hover:bg-[#E8F0FE]`}
                         >
-                          <td className="border-r-2 border-black p-4 align-middle">
+                          <td className="border-r border-slate-200 p-4 align-middle">
                             <span className="mb-1 flex flex-wrap items-center gap-2 font-mono text-xs font-extrabold uppercase text-black">
                               {getCountryFlag(row.country)} {row.label}
                               {isCheapest && (
@@ -857,21 +871,21 @@ export function Hinta() {
                                 </span>
                               )}
                             </span>
-                            {row.supplier && (
+                            {row.showSupplier && (
                               <div className="mt-1 flex flex-col gap-0.5">
                                 <span className="font-sans text-sm text-stone-700">
                                   {t("supplierLabel")}:{" "}
                                   <strong className="text-[#1450A3]">
-                                    {row.supplier.name}
+                                    {row.supplier!.name}
                                   </strong>
                                 </span>
                               </div>
                             )}
                           </td>
-                          <td className="border-r-2 border-black p-4 align-middle">
+                          <td className="border-r border-slate-200 p-4 align-middle">
                             <div className="flex flex-col">
                               <span
-                                className={`block font-mono text-lg font-black ${
+                                className={`block font-mono text-lg font-semibold ${
                                   isCheapest ? "text-yellow-900" : "text-stone-900"
                                 }`}
                               >
@@ -897,18 +911,18 @@ export function Hinta() {
                               )}
                             </div>
                           </td>
-                          <td className="border-r-2 border-black p-4 align-middle">
+                          <td className="border-r border-slate-200 p-4 align-middle">
                             <span className={`font-mono text-[11px] ${diffColorClass}`}>
                               {diffString}
                             </span>
                           </td>
                           <td className="p-4 text-center align-middle">
-                            {row.supplier ? (
+                            {row.showSupplier ? (
                               <a
-                                href={supplierWebsite(row.supplier)}
+                                href={supplierWebsite(row.supplier!)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 border-2 border-black bg-[#1450A3] px-3 py-2.5 font-mono text-[10px] font-black uppercase text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-black hover:shadow-none"
+                                className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 border border-slate-200 bg-[#1450A3] px-3 py-2.5 font-mono text-[10px] font-semibold uppercase text-white transition-all hover:bg-brand-mid"
                               >
                                 <span>{t("goSite")}</span>
                                 <ExternalLink className="h-3 w-3 shrink-0 text-white" />

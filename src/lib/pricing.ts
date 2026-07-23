@@ -9,10 +9,23 @@ export type LandedCalc = {
   landedPerUnit: number;
 };
 
-export function calculateOfferLanded(offer: Offer, qty: number): LandedCalc {
+// €/unit for a given order quantity: the highest-qty tier whose threshold is
+// met wins; otherwise the legacy wholesale break; otherwise the 1-piece price.
+export function effectiveUnitPrice(offer: Offer, qty: number): number {
+  const tiers = Array.isArray(offer.price_tiers) ? offer.price_tiers : [];
+  const applicable = tiers
+    .filter((t) => t && t.price > 0 && qty >= t.qty)
+    .sort((a, b) => b.qty - a.qty);
+  if (applicable.length > 0) return applicable[0].price;
+
   const isBulk = offer.min_wholesale_qty ? qty >= offer.min_wholesale_qty : false;
-  const unitPrice =
-    isBulk && offer.wholesale_price != null ? offer.wholesale_price : offer.unit_price;
+  return isBulk && offer.wholesale_price != null
+    ? offer.wholesale_price
+    : offer.unit_price;
+}
+
+export function calculateOfferLanded(offer: Offer, qty: number): LandedCalc {
+  const unitPrice = effectiveUnitPrice(offer, qty);
   const productTotal = unitPrice * qty;
   const freight =
     qty > 10 && offer.transport_bulk ? offer.transport_bulk : offer.transport_small;

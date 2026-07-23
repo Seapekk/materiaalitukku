@@ -1,10 +1,31 @@
 import { getRequestConfig } from "next-intl/server";
 import { hasLocale } from "next-intl";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { routing } from "./routing";
 import { STATIC_LOCALES } from "@/lib/languages";
 
 type Messages = Record<string, unknown>;
+
+// The whole `translations` table, cached across requests (revalidated every
+// 60s / on the "translations" tag). Previously this ran a fresh Supabase query
+// on EVERY non-Finnish page render — the main SSR cost for those locales.
+const getOverlayRows = unstable_cache(
+  async (): Promise<{ key: string; values: Record<string, string> }[]> => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return [];
+    try {
+      const supabase = createClient(url, key);
+      const { data } = await supabase.from("translations").select("key, values");
+      return data ?? [];
+    } catch {
+      return [];
+    }
+  },
+  ["translations-overlay"],
+  { revalidate: 60, tags: ["translations"] }
+);
 
 // Overlay non-empty values from `override` onto `base`. The base Finnish
 // bundle always provides every key, so the UI never renders blank text.
@@ -50,17 +71,7 @@ function nestDbRows(
 }
 
 async function loadDbOverlay(locale: string): Promise<Messages> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return {};
-  try {
-    const supabase = createClient(url, key);
-    const { data } = await supabase.from("translations").select("key, values");
-    return nestDbRows(data ?? [], locale);
-  } catch {
-    // Database translations are an overlay; the static bundles still work.
-    return {};
-  }
+  return nestDbRows(await getOverlayRows(), locale);
 }
 
 export default getRequestConfig(async ({ requestLocale }) => {

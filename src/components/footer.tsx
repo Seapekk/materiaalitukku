@@ -1,26 +1,37 @@
 import { getTranslations } from "next-intl/server";
 import { ExternalLink } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { createClient } from "@/lib/supabase/server";
+import type { FooterConfig } from "@/lib/types";
 
 export async function Footer() {
   const t = await getTranslations("footer");
   const tn = await getTranslations("nav");
   const tc = await getTranslations("common");
 
+  const supabase = await createClient();
+  const { data: cfgRaw } = await supabase
+    .from("footer_config")
+    .select("*")
+    .eq("id", true)
+    .maybeSingle();
+  const cfg = cfgRaw as FooterConfig | null;
+  const extraLinks = cfg?.links.filter((l) => l.title.trim() && l.url.trim()) ?? [];
+
   return (
-    <footer className="mt-12 border-t-2 border-black bg-white font-sans text-stone-600">
+    <footer className="mt-12 border-t border-slate-200 bg-white font-sans text-stone-600">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-8 md:grid-cols-2 md:px-10 lg:grid-cols-12">
         <div className="space-y-3 lg:col-span-6">
           <div className="flex items-center gap-2">
-            <span className="border border-black bg-black px-2 py-0.5 font-mono text-xs font-black uppercase tracking-wider text-white">
-              Materiaalitukku.com B2B
+            <span className="border border-slate-200 bg-brand px-2 py-0.5 font-mono text-xs font-semibold uppercase tracking-wider text-white">
+              {cfg?.company_name.trim() || "Materiaalitukku.com B2B"}
             </span>
           </div>
           <p className="text-xs leading-relaxed text-stone-500">
-            {t("description")}
+            {cfg?.description.trim() || t("description")}
           </p>
           <div className="font-mono text-[10px] text-gray-400">
-            © {new Date().getFullYear()} MateriaaliTukku. {t("rights")} ·{" "}
+            © {new Date().getFullYear()} MateriaaliTukku. {cfg?.copyright.trim() || t("rights")} ·{" "}
             {tc("vatNote")}
           </div>
         </div>
@@ -36,6 +47,9 @@ export async function Footer() {
                 {tn("contact")}
               </Link>
             </p>
+            {cfg?.email.trim() && <p>✉️ {cfg.email}</p>}
+            {cfg?.phone.trim() && <p>☎️ {cfg.phone}</p>}
+            {cfg?.address.trim() && <p>📍 {cfg.address}</p>}
           </div>
         </div>
 
@@ -55,7 +69,7 @@ export async function Footer() {
             </li>
             <li>
               <Link
-                href="/hinnoittelu"
+                href="/addproducts"
                 className="flex items-center gap-1 hover:underline"
               >
                 <span>🔗 {t("linkAddProducts")}</span>
@@ -89,6 +103,19 @@ export async function Footer() {
                 <ExternalLink className="h-3 w-3 text-gray-400" />
               </a>
             </li>
+            {extraLinks.map((link, i) => (
+              <li key={i}>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 hover:underline"
+                >
+                  <span>🔗 {link.title}</span>
+                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

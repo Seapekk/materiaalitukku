@@ -22,7 +22,7 @@ export function ComparisonTable({
   const comparison = getProductComparison(offers, suppliers, Math.max(1, qty));
   if (!comparison) {
     return (
-      <p className="border-2 border-black bg-white p-6 text-center font-mono text-sm font-bold uppercase text-gray-500">
+      <p className="border border-slate-200 bg-white p-6 text-center font-mono text-sm font-bold uppercase text-gray-500">
         ⚠️ {t("noOffers")}
       </p>
     );
@@ -54,26 +54,26 @@ export function ComparisonTable({
         </p>
       )}
 
-      <div className="overflow-x-auto border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+      <div className="overflow-x-auto border border-slate-200 bg-white">
         <table className="w-full min-w-[720px] border-collapse text-left text-sm">
           <thead className="bg-[#1450A3] text-white">
             <tr>
-              <th className="border-b-4 border-r-2 border-black p-3 font-mono text-[11px] font-bold uppercase tracking-wider">
+              <th className="border-b-4 border-r border-slate-200 p-3 font-mono text-[11px] font-bold uppercase tracking-wider">
                 {t("supplier")}
               </th>
-              <th className="border-b-4 border-r-2 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+              <th className="border-b-4 border-r border-slate-200 p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
                 {t("unitPrice")}
               </th>
-              <th className="border-b-4 border-r-2 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+              <th className="border-b-4 border-r border-slate-200 p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
                 {t("wholesalePrice")}
               </th>
-              <th className="border-b-4 border-r-2 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+              <th className="border-b-4 border-r border-slate-200 p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
                 {t("freight")}
               </th>
-              <th className="border-b-4 border-r-2 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+              <th className="border-b-4 border-r border-slate-200 p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
                 {t("landedTotal")}
               </th>
-              <th className="border-b-4 border-black p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
+              <th className="border-b-4 border-slate-200 p-3 text-right font-mono text-[11px] font-bold uppercase tracking-wider">
                 {t("landedPerUnit")}
               </th>
             </tr>
@@ -86,7 +86,7 @@ export function ComparisonTable({
               return (
                 <tr
                   key={row.offer.id}
-                  className={`border-b-2 border-black transition-colors last:border-b-0 hover:bg-[#E8F0FE] ${
+                  className={`border-b border-slate-200 transition-colors last:border-b-0 hover:bg-[#E8F0FE] ${
                     isBest
                       ? "bg-yellow-100"
                       : i % 2 === 0
@@ -94,7 +94,7 @@ export function ComparisonTable({
                         : "bg-slate-50"
                   }`}
                 >
-                  <td className="border-r-2 border-black p-3 align-middle">
+                  <td className="border-r border-slate-200 p-3 align-middle">
                     <span className="block font-mono text-xs font-extrabold uppercase text-black">
                       {getCountryFlag(row.supplier?.country ?? "")}{" "}
                       {getCountryName(row.supplier?.country ?? "", locale)}
@@ -115,10 +115,10 @@ export function ComparisonTable({
                       </strong>
                     </span>
                   </td>
-                  <td className="border-r-2 border-black p-3 text-right align-middle font-mono">
+                  <td className="border-r border-slate-200 p-3 text-right align-middle font-mono">
                     {row.offer.unit_price.toFixed(2)} €
                   </td>
-                  <td className="border-r-2 border-black p-3 text-right align-middle font-mono">
+                  <td className="border-r border-slate-200 p-3 text-right align-middle font-mono">
                     {row.offer.wholesale_price != null ? (
                       <>
                         {row.offer.wholesale_price.toFixed(2)} €
@@ -132,14 +132,14 @@ export function ComparisonTable({
                       "—"
                     )}
                   </td>
-                  <td className="border-r-2 border-black p-3 text-right align-middle font-mono">
+                  <td className="border-r border-slate-200 p-3 text-right align-middle font-mono">
                     {row.calc.freight.toFixed(2)} €
                   </td>
-                  <td className="border-r-2 border-black p-3 text-right align-middle font-mono font-bold">
+                  <td className="border-r border-slate-200 p-3 text-right align-middle font-mono font-bold">
                     {row.calc.landedTotal.toFixed(2)} €
                   </td>
                   <td
-                    className={`p-3 text-right align-middle font-mono text-base font-black ${
+                    className={`p-3 text-right align-middle font-mono text-base font-semibold ${
                       isBest ? "text-yellow-900" : "text-[#1450A3]"
                     }`}
                   >

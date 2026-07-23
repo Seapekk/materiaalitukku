@@ -44,7 +44,11 @@
     "password": "Parool",
     "loginButton": "Logi sisse",
     "invalidCredentials": "Vale e-post või parool.",
-    "genericError": "Midagi läks valesti. Palun proovi uuesti."
+    "genericError": "Midagi läks valesti. Palun proovi uuesti.",
+    "siseneTitle": "Administraatori sisselogimine",
+    "siseneSubtitle": "Logi jätkamiseks sisse Google kontoga.",
+    "googleButton": "Jätka Google'iga",
+    "oauthFailed": "Google sisselogimine ebaõnnestus. Proovi uuesti."
   },
   "products": {
     "title": "Hinnavõrdlus",
@@ -130,7 +134,27 @@
     "markDone": "Märgi käsitletuks",
     "regProduct": "Tootepakett (A)",
     "regSupplier": "Tarnijapakett (B)",
-    "regTransport": "Marsruudipakett (C)"
+    "regTransport": "Marsruudipakett (C)",
+    "matchProductPlaceholder": "Seo olemasoleva tootega…",
+    "newProduct": "Uus toode",
+    "dashboardStats": "Töölaud",
+    "statProducts": "Tooted",
+    "statProductsActive": "Aktiivsed",
+    "statProductsHidden": "Peidetud",
+    "statDuplicates": "Duplikaadid",
+    "statErrors": "Vead",
+    "statTranslations": "Keeled valmis",
+    "statTranslationKeys": "Tõlkevõtmed",
+    "statApiKeys": "API-võtmed",
+    "statBackup": "Varukoopia",
+    "duplicatesWarning": "Need tootenimed esinevad rohkem kui korra — seo ettepanekud ühega neist, mitte ei kinnita uue tootena:",
+    "more": "veel",
+    "configured": "Seadistatud",
+    "missing": "Puudub",
+    "backupNote": "Laadib alla tooted, pakkumised, tarnijad, transpordiettevõtted ja kategooriad ühe JSON-failina.",
+    "backupButton": "Laadi varukoopia",
+    "backupPending": "Eksporditakse…",
+    "backupError": "Varukoopia eksport ebaõnnestus."
   },
   "footer": {
     "rights": "Kõik õigused kaitstud.",

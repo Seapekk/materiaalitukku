@@ -1,8 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdminAction } from "@/lib/supabase/admin";
 import { flattenMessages } from "@/lib/flatten-messages";
+import {
+  translateTexts,
+  engineKeyConfigured,
+  DEFAULT_ENGINE,
+  type TranslationEngine,
+} from "@/lib/translate";
+import { logActivity } from "@/lib/logs";
 import { EU_LANGUAGES, STATIC_LOCALES } from "@/lib/languages";
 import fiMessages from "../../../../../messages/fi.json";
 
@@ -12,28 +19,15 @@ export type TransActionState = {
   error?: string;
 };
 
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  return profile?.role === "admin" ? supabase : null;
-}
-
 // Upsert edited texts for one language into the translations table.
 // Empty strings clear the stored translation (fallback to Finnish resumes).
 export async function saveTranslations(
   lang: string,
   entries: { key: string; text: string }[]
 ): Promise<TransActionState> {
-  const supabase = await requireAdmin();
-  if (!supabase) return { error: "genericError" };
+  const ctx = await requireAdminAction();
+  if (!ctx) return { error: "genericError" };
+  const { supabase } = ctx;
   if (!EU_LANGUAGES.some((l) => l.code === lang) || lang === "fi")
     return { error: "genericError" };
 
@@ -66,8 +60,9 @@ export async function saveTranslations(
 export async function exportTranslationsCsv(): Promise<
   TransActionState & { csv?: string }
 > {
-  const supabase = await requireAdmin();
-  if (!supabase) return { error: "genericError" };
+  const ctx = await requireAdminAction();
+  if (!ctx) return { error: "genericError" };
+  const { supabase } = ctx;
 
   const base = flattenMessages(fiMessages as Record<string, unknown>);
   const staticByLang: Record<string, Record<string, string>> = {};
@@ -139,8 +134,9 @@ function parseCsv(text: string): string[][] {
 export async function importTranslationsCsv(
   csvText: string
 ): Promise<TransActionState> {
-  const supabase = await requireAdmin();
-  if (!supabase) return { error: "genericError" };
+  const ctx = await requireAdminAction();
+  if (!ctx) return { error: "genericError" };
+  const { supabase } = ctx;
 
   const rows = parseCsv(csvText);
   if (rows.length < 2) return { error: "genericError" };
@@ -190,16 +186,17 @@ export async function importTranslationsCsv(
 // AI mass-translation via Gemini. Strict fail-safe: any API error, count
 // mismatch or empty string aborts the whole run — nothing is written.
 export async function aiTranslateMissing(
-  lang: string
+  lang: string,
+  engine: TranslationEngine = DEFAULT_ENGINE
 ): Promise<TransActionState> {
-  const supabase = await requireAdmin();
-  if (!supabase) return { error: "genericError" };
+  const ctx = await requireAdminAction();
+  if (!ctx) return { error: "genericError" };
+  const { supabase, user } = ctx;
 
   const language = EU_LANGUAGES.find((l) => l.code === lang);
   if (!language || lang === "fi") return { error: "genericError" };
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { error: "aiNoKey" };
+  if (!engineKeyConfigured(engine)) return { error: "aiNoKey" };
 
   const base = flattenMessages(fiMessages as Record<string, unknown>);
   const staticTexts: Record<string, string> = (
@@ -225,46 +222,18 @@ export async function aiTranslateMissing(
   for (let i = 0; i < missing.length; i += CHUNK) {
     const chunk = missing.slice(i, i + CHUNK);
     const texts = chunk.map(([, text]) => text);
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text:
-                      `Translate the following Finnish UI strings of a building-materials price comparison site into ${language.name} (${lang}). ` +
-                      `Keep ICU placeholders like {count} and plural syntax exactly as they are. ` +
-                      `Return ONLY a JSON array of the translated strings, in the same order, same length.\n\n` +
-                      JSON.stringify(texts),
-                  },
-                ],
-              },
-            ],
-            generationConfig: { responseMimeType: "application/json" },
-          }),
-        }
-      );
-      if (!res.ok) return { error: "aiFailed" };
-      const data = await res.json();
-      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (typeof raw !== "string") return { error: "aiFailed" };
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed) || parsed.length !== chunk.length)
-        return { error: "aiFailed" };
-      for (let j = 0; j < chunk.length; j++) {
-        const out = parsed[j];
-        if (typeof out !== "string" || out.trim() === "")
-          return { error: "aiFailed" };
-        translated.set(chunk[j][0], out.trim());
-      }
-    } catch {
+    const out = await translateTexts(
+      texts,
+      language.name,
+      lang,
+      "Keep ICU placeholders like {count} and plural syntax exactly as they are. ",
+      engine
+    );
+    if (!out) {
+      await logActivity(supabase, user, "errors", `AI translation to "${lang}" failed`);
       return { error: "aiFailed" };
     }
+    for (let j = 0; j < chunk.length; j++) translated.set(chunk[j][0], out[j]);
   }
 
   const upserts = [...translated.entries()].map(([key, text]) => {
