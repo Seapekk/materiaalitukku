@@ -396,7 +396,9 @@
     "sendEmail": "send email",
     "call": "CALL",
     "backToTop": "Back to Top",
-    "noCompanies": "No transport companies with this filter."
+    "noCompanies": "No transport companies with this filter.",
+    "allCountries": "All countries",
+    "priceFrom": "from"
   },
   "toimittajat": {
     "heroTitle": "Partners and Factories",

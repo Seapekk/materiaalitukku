@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { EU_LANGUAGES } from "@/lib/languages";
 import { categoryName, type Category } from "@/lib/types";
 import {
   createCategory,
   deleteCategory,
+  importCategoriesCsv,
   translateCategoryMissing,
   updateCategory,
   type CatActionState,
 } from "@/app/[locale]/admin/categories/actions";
+
+const csvEscape = (v: string) =>
+  /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 
 type Draft = { name: Record<string, string>; parentSlug: string | null; sortOrder: number };
 
@@ -29,12 +33,20 @@ export function CategoriesDashboard({ categories }: { categories: Category[] }) 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [newNameFi, setNewNameFi] = useState("");
   const [newParentSlug, setNewParentSlug] = useState("");
   const [newSortOrder, setNewSortOrder] = useState(0);
 
-  const topLevel = categories.filter((c) => !c.parent_slug);
+  const [catType, setCatType] = useState<"construction" | "transport">(
+    "construction"
+  );
+
+  const visible = categories.filter(
+    (c) => (c.type ?? "construction") === catType
+  );
+  const topLevel = visible.filter((c) => !c.parent_slug);
 
   const draftFor = (c: Category): Draft =>
     drafts[c.slug] ?? {
@@ -76,6 +88,7 @@ export function CategoriesDashboard({ categories }: { categories: Category[] }) 
         nameFi: newNameFi,
         parentSlug: newParentSlug || null,
         sortOrder: newSortOrder,
+        type: catType,
       });
       handleResult(res, () => {
         setNotice("Saved.");
@@ -112,6 +125,53 @@ export function CategoriesDashboard({ categories }: { categories: Category[] }) 
     });
   };
 
+  const handleDownloadCsv = () => {
+    const header = [
+      "slug",
+      "type",
+      "parent_slug",
+      "sort_order",
+      ...EU_LANGUAGES.map((l) => `name_${l.code}`),
+    ];
+    const lines = [header.join(",")];
+    for (const c of categories) {
+      const row = [
+        c.slug,
+        c.type ?? "construction",
+        c.parent_slug ?? "",
+        String(c.sort_order ?? 0),
+        ...EU_LANGUAGES.map((l) => c.name[l.code] ?? ""),
+      ].map((v) => csvEscape(String(v)));
+      lines.push(row.join(","));
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "categories.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleUploadCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      startTransition(async () => {
+        const res = await importCategoriesCsv(text);
+        if (res.error) setNotice(errMsg(res.error));
+        else {
+          setNotice(`Imported ${res.count ?? 0} categories.`);
+          router.refresh();
+        }
+      });
+    };
+    reader.readAsText(file);
+  };
+
   const handleTranslate = (c: Category) => {
     startTransition(async () => {
       const res = await translateCategoryMissing(c.slug);
@@ -129,10 +189,57 @@ export function CategoriesDashboard({ categories }: { categories: Category[] }) 
 
   return (
     <div className="space-y-4">
+      {/* Construction / Transport split toggle + CSV import/export */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="admin-card inline-flex gap-1 p-1">
+          {(
+            [
+              { key: "construction", label: "Rakennus / Construction" },
+              { key: "transport", label: "Kuljetus / Transport" },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => {
+                setCatType(t.key);
+                setNewParentSlug("");
+              }}
+              className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-colors ${
+                catType === t.key
+                  ? "bg-brand text-white"
+                  : "text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handleDownloadCsv} className="admin-btn">
+            ↓ Download CSV
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => fileRef.current?.click()}
+            className="admin-btn"
+          >
+            ↑ Upload CSV
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleUploadCsv}
+            className="hidden"
+          />
+        </div>
+      </div>
+
       {/* Add new */}
       <div className="admin-card space-y-3 p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Add new category
+          Add new {catType === "transport" ? "transport" : "construction"}{" "}
+          category
         </h2>
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
@@ -185,12 +292,12 @@ export function CategoriesDashboard({ categories }: { categories: Category[] }) 
 
       {/* List */}
       <div className="admin-card divide-y divide-slate-100">
-        {categories.length === 0 && (
+        {visible.length === 0 && (
           <p className="p-10 text-center text-sm text-slate-400">
             No categories yet.
           </p>
         )}
-        {categories.map((c) => {
+        {visible.map((c) => {
           const draft = draftFor(c);
           const dirty = Boolean(drafts[c.slug]);
           const isOpen = expanded.has(c.slug);

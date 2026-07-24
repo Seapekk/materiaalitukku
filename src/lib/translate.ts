@@ -39,10 +39,15 @@ function llmPrompt(
   texts: string[],
   targetLanguageName: string,
   targetLangCode: string,
-  extraInstruction: string
+  extraInstruction: string,
+  sourceLang: string
 ): string {
+  const from =
+    sourceLang === "auto"
+      ? `the following strings (auto-detect each string's language)`
+      : `the following ${sourceLang} strings`;
   return (
-    `Translate the following Finnish strings of a building-materials price ` +
+    `Translate ${from} of a building-materials price ` +
     `comparison site into ${targetLanguageName} (${targetLangCode}). ` +
     extraInstruction +
     `Return ONLY a JSON array of the translated strings, in the same order, ` +
@@ -55,33 +60,39 @@ export async function translateTexts(
   targetLanguageName: string,
   targetLangCode: string,
   extraInstruction = "",
-  engine: TranslationEngine = DEFAULT_ENGINE
+  engine: TranslationEngine = DEFAULT_ENGINE,
+  // Source language code, or "auto" to detect (e.g. carrier descriptions that
+  // may be written in any language). Defaults to Finnish for the legacy callers.
+  sourceLang = "fi"
 ): Promise<string[] | null> {
   if (texts.length === 0) return null;
   try {
     switch (engine) {
       case "cloud":
-        return await translateCloud(texts, targetLangCode);
+        return await translateCloud(texts, targetLangCode, sourceLang);
       case "gemini":
         return await translateGemini(
           texts,
           targetLanguageName,
           targetLangCode,
-          extraInstruction
+          extraInstruction,
+          sourceLang
         );
       case "claude":
         return await translateClaude(
           texts,
           targetLanguageName,
           targetLangCode,
-          extraInstruction
+          extraInstruction,
+          sourceLang
         );
       case "gpt":
         return await translateGpt(
           texts,
           targetLanguageName,
           targetLangCode,
-          extraInstruction
+          extraInstruction,
+          sourceLang
         );
       default:
         return null;
@@ -94,7 +105,8 @@ export async function translateTexts(
 // --- Google Cloud Translation v2 (default) ---------------------------------
 async function translateCloud(
   texts: string[],
-  targetLangCode: string
+  targetLangCode: string,
+  sourceLang: string
 ): Promise<string[] | null> {
   const key = process.env.GOOGLE_TRANSLATE_API_KEY;
   if (!key) return null;
@@ -105,7 +117,8 @@ async function translateCloud(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         q: texts,
-        source: "fi",
+        // Omit `source` to let Google auto-detect the language.
+        ...(sourceLang && sourceLang !== "auto" ? { source: sourceLang } : {}),
         target: targetLangCode,
         format: "text",
       }),
@@ -125,7 +138,8 @@ async function translateGemini(
   texts: string[],
   name: string,
   code: string,
-  extra: string
+  extra: string,
+  sourceLang: string
 ): Promise<string[] | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
@@ -135,7 +149,7 @@ async function translateGemini(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: llmPrompt(texts, name, code, extra) }] }],
+        contents: [{ parts: [{ text: llmPrompt(texts, name, code, extra, sourceLang) }] }],
         generationConfig: { responseMimeType: "application/json" },
       }),
     }
@@ -150,7 +164,8 @@ async function translateClaude(
   texts: string[],
   name: string,
   code: string,
-  extra: string
+  extra: string,
+  sourceLang: string
 ): Promise<string[] | null> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return null;
@@ -165,7 +180,7 @@ async function translateClaude(
     body: JSON.stringify({
       model,
       max_tokens: 4096,
-      messages: [{ role: "user", content: llmPrompt(texts, name, code, extra) }],
+      messages: [{ role: "user", content: llmPrompt(texts, name, code, extra, sourceLang) }],
     }),
   });
   if (!res.ok) return null;
@@ -178,7 +193,8 @@ async function translateGpt(
   texts: string[],
   name: string,
   code: string,
-  extra: string
+  extra: string,
+  sourceLang: string
 ): Promise<string[] | null> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
@@ -191,7 +207,7 @@ async function translateGpt(
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: "user", content: llmPrompt(texts, name, code, extra) }],
+      messages: [{ role: "user", content: llmPrompt(texts, name, code, extra, sourceLang) }],
     }),
   });
   if (!res.ok) return null;

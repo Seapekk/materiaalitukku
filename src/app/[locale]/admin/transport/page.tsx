@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import type { Registration, TransportCompany } from "@/lib/types";
+import type { Category, Registration, TransportCompany } from "@/lib/types";
 import { TransportDashboard } from "@/components/transport-dashboard";
 
 export const metadata: Metadata = { title: "Admin — Transport Companies" };
@@ -9,19 +9,28 @@ export const dynamic = "force-dynamic";
 export default async function TransportPage() {
   const supabase = await createClient();
 
-  const { data: companiesRaw } = await supabase
-    .from("transport_companies")
-    .select("*")
-    .order("created_at", { ascending: false });
-  const companies = (companiesRaw ?? []) as TransportCompany[];
+  const [{ data: companiesRaw }, { data: registrationsRaw }, { data: catsRaw }] =
+    await Promise.all([
+      supabase
+        .from("transport_companies")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("registrations")
+        .select("*")
+        .eq("reg_type", "transport")
+        .eq("status", "pending")
+        .order("created_at"),
+      supabase
+        .from("categories")
+        .select("*")
+        .eq("type", "transport")
+        .order("sort_order"),
+    ]);
 
-  const { data: registrationsRaw } = await supabase
-    .from("registrations")
-    .select("*")
-    .eq("reg_type", "transport")
-    .eq("status", "pending")
-    .order("created_at");
+  const companies = (companiesRaw ?? []) as TransportCompany[];
   const registrations = (registrationsRaw ?? []) as Registration[];
+  const transportCategories = (catsRaw ?? []) as Category[];
 
   return (
     <div className="admin-page">
@@ -33,7 +42,11 @@ export default async function TransportPage() {
         </p>
       </header>
 
-      <TransportDashboard companies={companies} registrations={registrations} />
+      <TransportDashboard
+        companies={companies}
+        registrations={registrations}
+        transportCategories={transportCategories}
+      />
     </div>
   );
 }

@@ -396,7 +396,9 @@
     "sendEmail": "Saada e-kiri",
     "call": "HELISTA",
     "backToTop": "Tagasi üles",
-    "noCompanies": "Selle filtriga veofirmasid pole."
+    "noCompanies": "Selle filtriga veofirmasid pole.",
+    "allCountries": "Kõik riigid",
+    "priceFrom": "alates"
   },
   "toimittajat": {
     "heroTitle": "Koostööpartnerid ja Tehased",

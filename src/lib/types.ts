@@ -1,9 +1,12 @@
+export type CategoryType = "construction" | "transport";
+
 export type Category = {
   id: number;
   slug: string;
   parent_slug: string | null;
   name: Record<string, string>;
   sort_order: number;
+  type: CategoryType;
 };
 
 export type Product = {
@@ -65,18 +68,28 @@ export type OfferSource = Offer["source"];
 
 export type RouteDirection = "inbound" | "outbound" | "roundtrip";
 
+export type SocialLink = { platform: string; url: string };
+
 export type TransportCompany = {
   id: string;
   name: string;
+  reg_number: string | null;
   origin_country: string;
   direction: RouteDirection;
+  address: string | null;
   days: string;
+  // Transport service-type slugs (see `categories` where type = 'transport').
   services: string[];
+  // { <service slug>: from-price € } — per-type starting price.
+  service_prices: Record<string, number>;
+  socials: SocialLink[];
   capacity: string | null;
   email: string | null;
   phone: string | null;
   website: string | null;
   description: string | null;
+  // Public-facing description translated into fi/en/sv (source may be any lang).
+  description_translations: Record<string, string>;
   featured: boolean;
   created_at: string;
   ftl_price: number | null;

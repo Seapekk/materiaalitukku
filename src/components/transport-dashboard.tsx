@@ -1,41 +1,29 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getCountryFlag } from "@/lib/country";
 import { EU_COUNTRY_CODES } from "@/lib/eu-countries";
 import { regionName } from "@/lib/kuljetus-constants";
-import { getLifecycleStatus, type LifecycleStatus } from "@/lib/lifecycle";
+import { getCountdownDays, getLifecycleStatus, type LifecycleStatus } from "@/lib/lifecycle";
 import { LifecycleBadge } from "@/components/lifecycle-badge";
-import { formatRoute, type Registration, type RouteDirection, type TransportCompany } from "@/lib/types";
+import { categoryName, formatRoute, type Category, type Registration, type RouteDirection, type TransportCompany } from "@/lib/types";
 import {
   approveTransportRegistration,
   createTransport,
   deleteTransport,
+  importTransportCompanies,
   reactivateTransport,
   rejectTransport,
   rejectTransportRegistration,
   renewTransport,
+  translateTransportDescriptions,
   updateTransport,
   type TransportActionState,
   type TransportInput,
 } from "@/app/[locale]/admin/transport/actions";
-
-// `key` is the value persisted in the DB (and used by the public transport
-// page) — do not change it. `label` is the English text shown to the admin.
-const SERVICE_OPTIONS = [
-  { key: "FTL (Täysikuorma)", label: "FTL (full load)", priceField: "ftlPrice" as const },
-  { key: "LTL (Osakuorma)", label: "LTL (part load)", priceField: "ltlPrice" as const },
-  { key: "Pikakuljetus", label: "Express", priceField: "expressPrice" as const },
-  { key: "Lämpösäädelty", label: "Temperature-controlled", priceField: null },
-  { key: "Nosturikuljetus", label: "Crane transport", priceField: null },
-  { key: "Erikoiskuljetus", label: "Special transport", priceField: null },
-];
-const SERVICE_LABEL: Record<string, string> = Object.fromEntries(
-  SERVICE_OPTIONS.map((s) => [s.key, s.label])
-);
-const serviceLabels = (keys: string[]) =>
-  keys.map((k) => SERVICE_LABEL[k] ?? k).join(", ");
+import { DESC_LANGS, missingDescLangs } from "@/lib/transport-i18n";
+import { TRANSLATION_ENGINES, type TranslationEngine } from "@/lib/translate";
 
 const DIRECTION_LABEL: Record<RouteDirection, string> = {
   inbound: "Inbound to Finland",
@@ -56,23 +44,32 @@ const EMPTY_FORM: TransportInput = {
   originCountry: "ee",
   direction: "inbound",
   services: [],
-  ftlPrice: null,
-  ltlPrice: null,
-  expressPrice: null,
-  capacity: "",
-  days: "",
+  servicePrices: {},
+  socials: [],
   email: "",
   phone: "",
   website: "",
   description: "",
 };
 
+const SOCIAL_PRESETS = ["whatsapp", "facebook", "viber", "telegram", "x", "instagram"];
+const isCustomPlatform = (p: string) => !SOCIAL_PRESETS.includes(p);
+
+type SortKey = "status" | "daysLeft";
+const STATUS_RANK: Record<LifecycleStatus, number> = {
+  active: 0,
+  expired: 1,
+  rejected: 2,
+};
+
 export function TransportDashboard({
   companies,
   registrations,
+  transportCategories,
 }: {
   companies: TransportCompany[];
   registrations: Registration[];
+  transportCategories: Category[];
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<"all" | LifecycleStatus>("all");
@@ -80,7 +77,111 @@ export function TransportDashboard({
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<TransportInput>(EMPTY_FORM);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [engine, setEngine] = useState<TranslationEngine>(TRANSLATION_ENGINES[0].id);
   const [pending, startTransition] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const runTranslate = (ids: string[]) =>
+    startTransition(async () => {
+      const res = await translateTransportDescriptions(ids, engine);
+      if (res.error)
+        setNotice(
+          res.error === "engineNotConfigured"
+            ? "That translation engine has no API key configured."
+            : "Translation failed. Please try again."
+        );
+      else {
+        setNotice(`Translated ${res.count ?? 0} description(s).`);
+        router.refresh();
+      }
+    });
+
+  // Socials editor (edit form)
+  const addSocial = () =>
+    setForm((f) => ({ ...f, socials: [...f.socials, { platform: "whatsapp", url: "" }] }));
+  const patchSocial = (i: number, patch: Partial<{ platform: string; url: string }>) =>
+    setForm((f) => ({
+      ...f,
+      socials: f.socials.map((s, j) => (j === i ? { ...s, ...patch } : s)),
+    }));
+  const removeSocial = (i: number) =>
+    setForm((f) => ({ ...f, socials: f.socials.filter((_, j) => j !== i) }));
+
+  // Export / import
+  const downloadBlob = (data: string, filename: string, mime: string) => {
+    const blob = new Blob([data], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportJson = () =>
+    downloadBlob(JSON.stringify(companies, null, 2), "transport-companies.json", "application/json");
+
+  const handleExportCsv = () => {
+    const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const cols = [
+      "id", "name", "reg_number", "origin_country", "direction", "address",
+      "services", "service_prices", "socials", "email", "phone", "website",
+      "description", "desc_fi", "desc_en", "desc_sv", "status", "expires_at",
+    ];
+    const lines = [cols.join(",")];
+    for (const c of companies) {
+      const rec = c as unknown as Record<string, unknown>;
+      const tr = c.description_translations ?? {};
+      const cell = (k: string) => {
+        if (k === "desc_fi") return tr.fi ?? "";
+        if (k === "desc_en") return tr.en ?? "";
+        if (k === "desc_sv") return tr.sv ?? "";
+        const v = rec[k];
+        if (v == null) return "";
+        if (Array.isArray(v)) return k === "services" ? v.join("|") : JSON.stringify(v);
+        if (typeof v === "object") return JSON.stringify(v);
+        return String(v);
+      };
+      lines.push(cols.map((k) => esc(cell(k))).join(","));
+    }
+    downloadBlob(lines.join("\n"), "transport-companies.csv", "text/csv;charset=utf-8");
+  };
+
+  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      startTransition(async () => {
+        const res = await importTransportCompanies(String(reader.result ?? ""));
+        if (res.error) setNotice("Import failed — check the JSON file.");
+        else {
+          setNotice(`Imported ${res.count ?? 0} companies.`);
+          router.refresh();
+        }
+      });
+    };
+    reader.readAsText(file);
+  };
+
+  // Category name for a slug (admin UI is English); falls back to the raw slug
+  // so pre-existing free-text services still render.
+  const catName = (slug: string) => {
+    const c = transportCategories.find((x) => x.slug === slug);
+    return c ? categoryName(c, "en") : slug;
+  };
+  const serviceLabels = (keys: string[]) => keys.map(catName).join(", ");
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -90,6 +191,26 @@ export function TransportDashboard({
       return true;
     });
   }, [companies, statusFilter, search]);
+
+  const sorted = useMemo(() => {
+    if (!sort) return filtered;
+    const val = (c: TransportCompany) =>
+      sort.key === "status"
+        ? STATUS_RANK[getLifecycleStatus(c)]
+        : (getCountdownDays(c.expires_at) ?? -1);
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => (val(a) - val(b)) * dir);
+  }, [filtered, sort]);
+
+  // Header click cycles descending (high→low) ⇄ ascending (low→high).
+  const toggleSort = (key: SortKey) =>
+    setSort((s) =>
+      s && s.key === key
+        ? { key, dir: s.dir === "desc" ? "asc" : "desc" }
+        : { key, dir: "desc" }
+    );
+  const sortArrow = (key: SortKey) =>
+    !sort || sort.key !== key ? "↕" : sort.dir === "desc" ? "▼" : "▲";
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: companies.length, active: 0, expired: 0, rejected: 0 };
@@ -118,11 +239,8 @@ export function TransportDashboard({
         originCountry: c.origin_country,
         direction: c.direction,
         services: c.services,
-        ftlPrice: c.ftl_price,
-        ltlPrice: c.ltl_price,
-        expressPrice: c.express_price,
-        capacity: c.capacity ?? "",
-        days: c.days,
+        servicePrices: { ...(c.service_prices ?? {}) },
+        socials: [...(c.socials ?? [])],
         email: c.email ?? "",
         phone: c.phone ?? "",
         website: c.website ?? "",
@@ -245,12 +363,31 @@ export function TransportDashboard({
           placeholder="Search company…"
           className="admin-input h-9 w-44"
         />
-        <button
-          onClick={() => startEdit()}
-          className="admin-btn admin-btn-primary ml-auto"
-        >
-          + Add transport company
-        </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button onClick={handleExportJson} className="admin-btn">
+            ↓ JSON
+          </button>
+          <button onClick={handleExportCsv} className="admin-btn">
+            ↓ CSV
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => fileRef.current?.click()}
+            className="admin-btn"
+          >
+            ↑ Import JSON/CSV
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".json,application/json,.csv,text/csv"
+            onChange={handleImportJson}
+            className="hidden"
+          />
+          <button onClick={() => startEdit()} className="admin-btn admin-btn-primary">
+            + Add transport company
+          </button>
+        </div>
       </div>
 
       {notice && (
@@ -344,72 +481,129 @@ export function TransportDashboard({
             </div>
           </div>
 
-          {/* Services + prices */}
+          {/* Services (all transport categories) + per-type "from" price */}
           <div className="space-y-2">
-            <label className="admin-label">Services *</label>
-            <div className="grid grid-cols-2 gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-3">
-              {SERVICE_OPTIONS.map((s) => (
-                <label
-                  key={s.key}
-                  className="flex cursor-pointer items-center gap-1.5 text-sm text-slate-700"
-                >
-                  <input
-                    type="checkbox"
-                    checked={form.services.includes(s.key)}
-                    onChange={() => toggleService(s.key)}
-                  />
-                  {s.label}
-                </label>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {SERVICE_OPTIONS.filter(
-                (s) => s.priceField && form.services.includes(s.key)
-              ).map((s) => (
-                <div key={s.key} className="space-y-1">
-                  <label className="admin-label">{s.label} price (€)</label>
-                  <input
-                    type="number"
-                    value={form[s.priceField!] ?? ""}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        [s.priceField!]: e.target.value === "" ? null : Number(e.target.value),
-                      })
-                    }
-                    className="admin-input h-9"
-                  />
-                </div>
-              ))}
+            <label className="admin-label">
+              Transport types * — pick one or more; optional “from” price each
+            </label>
+            <div className="grid grid-cols-1 gap-2 rounded-md border border-slate-200 bg-white p-3 sm:grid-cols-2">
+              {transportCategories.map((cat) => {
+                const active = form.services.includes(cat.slug);
+                return (
+                  <div
+                    key={cat.slug}
+                    className={`flex items-center gap-2 rounded-md border p-2 ${
+                      active ? "border-brand/40 bg-brand/5" : "border-slate-200"
+                    }`}
+                  >
+                    <label className="flex flex-1 cursor-pointer items-center gap-1.5 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={() => toggleService(cat.slug)}
+                      />
+                      {categoryName(cat, "en")}
+                    </label>
+                    {active && (
+                      <div className="flex shrink-0 items-center gap-1">
+                        <span className="text-[10px] font-medium uppercase text-slate-400">
+                          from €
+                        </span>
+                        <input
+                          type="number"
+                          value={form.servicePrices[cat.slug] ?? ""}
+                          onChange={(e) =>
+                            setForm((f) => {
+                              const next = { ...f.servicePrices };
+                              if (e.target.value === "") delete next[cat.slug];
+                              else next[cat.slug] = Number(e.target.value);
+                              return { ...f, servicePrices: next };
+                            })
+                          }
+                          className="admin-input h-8 w-20"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {transportCategories.length === 0 && (
+                <p className="col-span-full py-2 text-center text-xs text-slate-400">
+                  No transport categories yet — add them under Categories.
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="admin-label">Capacity</label>
-              <input
-                value={form.capacity ?? ""}
-                onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-                className="admin-input h-9"
-              />
+          {/* Social media (whatsapp / facebook / viber / telegram / x / instagram / custom) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="admin-label">Social media</label>
+              <button type="button" onClick={addSocial} className="admin-btn px-2 py-1">
+                + Add social
+              </button>
             </div>
-            <div className="space-y-1">
-              <label className="admin-label">Lead time</label>
-              <input
-                value={form.days}
-                onChange={(e) => setForm({ ...form, days: e.target.value })}
-                className="admin-input h-9"
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="admin-label">Description</label>
-              <textarea
-                rows={3}
-                value={form.description ?? ""}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="admin-input"
-              />
-            </div>
+            {form.socials.length === 0 ? (
+              <p className="text-xs text-slate-400">No social profiles.</p>
+            ) : (
+              <div className="space-y-2">
+                {form.socials.map((s, i) => {
+                  const custom = isCustomPlatform(s.platform);
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <select
+                        value={custom ? "muu" : s.platform}
+                        onChange={(e) =>
+                          patchSocial(i, {
+                            platform: e.target.value === "muu" ? "" : e.target.value,
+                          })
+                        }
+                        className="admin-input h-9 w-32 cursor-pointer"
+                      >
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="viber">Viber</option>
+                        <option value="telegram">Telegram</option>
+                        <option value="x">X (Twitter)</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="muu">Muu / Other</option>
+                      </select>
+                      {custom && (
+                        <input
+                          value={s.platform}
+                          onChange={(e) => patchSocial(i, { platform: e.target.value })}
+                          placeholder="Platform"
+                          className="admin-input h-9 w-28"
+                        />
+                      )}
+                      <input
+                        value={s.url}
+                        onChange={(e) => patchSocial(i, { url: e.target.value })}
+                        placeholder="URL / handle"
+                        className="admin-input h-9 flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeSocial(i)}
+                        className="admin-btn admin-btn-danger px-2 py-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="admin-label">Description</label>
+            <textarea
+              rows={3}
+              value={form.description ?? ""}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="admin-input"
+            />
           </div>
 
           <div className="flex gap-2">
@@ -427,8 +621,40 @@ export function TransportDashboard({
         </div>
       )}
 
+      {/* Description translation engine (fi / en / sv, for the public listing) */}
+      <div className="admin-card flex flex-wrap items-center gap-2 p-3">
+        <span className="text-xs font-semibold text-slate-600">
+          Description → fi / en / sv:
+        </span>
+        <select
+          value={engine}
+          onChange={(e) => setEngine(e.target.value as TranslationEngine)}
+          className="admin-input h-9 w-auto cursor-pointer"
+        >
+          {TRANSLATION_ENGINES.map((eng) => (
+            <option key={eng.id} value={eng.id}>
+              {eng.label}
+            </option>
+          ))}
+        </select>
+        <button
+          disabled={pending}
+          onClick={() => runTranslate([])}
+          className="admin-btn admin-btn-primary"
+        >
+          Translate all missing
+        </button>
+        <button
+          disabled={pending || selected.size === 0}
+          onClick={() => runTranslate([...selected])}
+          className="admin-btn"
+        >
+          Translate selected ({selected.size})
+        </button>
+      </div>
+
       <div className="admin-card overflow-hidden">
-        {filtered.length === 0 ? (
+        {sorted.length === 0 ? (
           <p className="p-10 text-center text-sm text-slate-400">
             No transport companies yet.
           </p>
@@ -436,27 +662,114 @@ export function TransportDashboard({
           <table className="admin-table">
             <thead>
               <tr>
+                <th className="w-8">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={sorted.length > 0 && sorted.every((c) => selected.has(c.id))}
+                    onChange={(e) =>
+                      setSelected(
+                        e.target.checked ? new Set(sorted.map((c) => c.id)) : new Set()
+                      )
+                    }
+                  />
+                </th>
                 <th>Company</th>
+                <th>Country</th>
                 <th>Route</th>
                 <th>Services</th>
-                <th>Status</th>
+                <th>Descr. i18n</th>
+                <th>
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("status")}
+                    className="flex items-center gap-1 font-semibold hover:text-slate-900"
+                  >
+                    Status <span className="text-slate-400">{sortArrow("status")}</span>
+                  </button>
+                </th>
+                <th>
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("daysLeft")}
+                    className="flex items-center gap-1 font-semibold hover:text-slate-900"
+                  >
+                    Days left{" "}
+                    <span className="text-slate-400">{sortArrow("daysLeft")}</span>
+                  </button>
+                </th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => {
+              {sorted.map((c) => {
                 const status = getLifecycleStatus(c);
+                const daysLeft = getCountdownDays(c.expires_at);
+                const missing = missingDescLangs(c);
                 return (
                   <tr key={c.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${c.name}`}
+                        checked={selected.has(c.id)}
+                        onChange={() => toggleSelected(c.id)}
+                      />
+                    </td>
                     <td className="font-medium text-slate-900">{c.name}</td>
+                    <td className="whitespace-nowrap text-xs text-slate-600">
+                      {getCountryFlag(c.origin_country)}{" "}
+                      {regionName(c.origin_country, "en")}
+                    </td>
                     <td className="text-xs text-slate-500">
                       {formatRoute(c.origin_country, c.direction)}
                     </td>
                     <td className="text-xs text-slate-500">
                       {serviceLabels(c.services)}
                     </td>
+                    <td className="whitespace-nowrap text-xs">
+                      {!c.description?.trim() ? (
+                        <span className="text-slate-300">—</span>
+                      ) : (
+                        <span className="flex gap-1">
+                          {DESC_LANGS.map((l) => {
+                            const has = !missing.includes(l.code);
+                            return (
+                              <span
+                                key={l.code}
+                                title={has ? `${l.code}: ✓` : `${l.code}: missing`}
+                                className={`rounded px-1 font-mono text-[10px] font-bold uppercase ${
+                                  has
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-rose-100 text-rose-600"
+                                }`}
+                              >
+                                {l.code}
+                              </span>
+                            );
+                          })}
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <LifecycleBadge row={c} rejectionReason={c.rejection_reason} />
+                    </td>
+                    <td className="whitespace-nowrap text-xs">
+                      {status === "rejected" ? (
+                        <span className="text-slate-400">—</span>
+                      ) : daysLeft == null ? (
+                        <span className="font-medium text-rose-600">Expired</span>
+                      ) : (
+                        <span
+                          className={
+                            daysLeft <= 30
+                              ? "font-medium text-amber-600"
+                              : "text-slate-600"
+                          }
+                        >
+                          {daysLeft} days
+                        </span>
+                      )}
                     </td>
                     <td>
                       <div className="flex flex-wrap justify-end gap-1.5">

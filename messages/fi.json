@@ -649,7 +649,9 @@
     "sendEmail": "Lähetä sähköpostia",
     "call": "SOITA",
     "backToTop": "Takaisin Ylös",
-    "noCompanies": "Ei kuljetusyrityksiä tällä suodattimella."
+    "noCompanies": "Ei kuljetusyrityksiä tällä suodattimella.",
+    "allCountries": "Kaikki maat",
+    "priceFrom": "alkaen"
   },
   "toimittajat": {
     "heroTitle": "Yhteistyökumppanit ja Tehtaat",

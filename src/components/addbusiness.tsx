@@ -9,14 +9,26 @@ import { regionName } from "@/lib/kuljetus-constants";
 import { registerPartner, type PortalState } from "@/app/[locale]/(portal)/actions";
 import { categoryName, type Category } from "@/lib/types";
 
-type Social = { platform: string; url: string };
+type Social = { platform: string; url: string; custom?: string };
+
+const SOCIAL_OPTIONS = [
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "facebook", label: "Facebook" },
+  { value: "viber", label: "Viber" },
+  { value: "telegram", label: "Telegram" },
+  { value: "x", label: "X (Twitter)" },
+  { value: "instagram", label: "Instagram" },
+  { value: "muu", label: "Muu / Other" },
+] as const;
 
 const SOCIAL_PLACEHOLDERS: Record<string, string> = {
+  whatsapp: "+358 40 123 4567",
   facebook: "facebook.com/kayttaja",
-  insta: "@kayttaja",
+  viber: "+358 40 123 4567",
+  telegram: "@kayttaja",
   x: "x.com/kayttaja",
-  threads: "threads.net/@kayttaja",
-  linkedin: "linkedin.com/company/yritys",
+  instagram: "@kayttaja",
+  muu: "https://…",
 };
 
 export function AddBusiness({
@@ -26,9 +38,12 @@ export function AddBusiness({
 }) {
   const locale = useLocale();
   const [cats, setCats] = useState<Category[]>([]);
+  const [transportCats, setTransportCats] = useState<Category[]>([]);
 
   const [regType, setRegType] = useState<"supplier" | "transport">(initialType);
   const [companyName, setCompanyName] = useState("");
+  const [regNumber, setRegNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
   const [emailCodeSent, setEmailCodeSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
@@ -45,17 +60,11 @@ export function AddBusiness({
   const [routeDirection, setRouteDirection] = useState<
     "inbound" | "outbound" | "roundtrip"
   >("inbound");
-  const [servicesFTL, setServicesFTL] = useState(false);
-  const [servicesLTL, setServicesLTL] = useState(false);
-  const [servicesExpress, setServicesExpress] = useState(false);
-  const [servicesThermo, setServicesThermo] = useState(false);
-  const [servicesCrane, setServicesCrane] = useState(false);
-  const [servicesSpecial, setServicesSpecial] = useState(false);
-  const [ftlPrice, setFtlPrice] = useState<number | "">("");
-  const [ltlPrice, setLtlPrice] = useState<number | "">("");
-  const [expressPrice, setExpressPrice] = useState<number | "">("");
-  const [capacity, setCapacity] = useState("");
-  const [days, setDays] = useState("");
+  // Selected transport-category slugs + per-type "from" price.
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [servicePrices, setServicePrices] = useState<Record<string, number | "">>(
+    {}
+  );
 
   const [businessDesc, setBusinessDesc] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
@@ -68,11 +77,17 @@ export function AddBusiness({
       const { data } = await supabase
         .from("categories")
         .select("*")
-        .is("parent_slug", null)
         .order("sort_order");
-      setCats((data as Category[]) ?? []);
+      const all = (data as Category[]) ?? [];
+      setCats(all.filter((c) => c.type !== "transport" && !c.parent_slug));
+      setTransportCats(all.filter((c) => c.type === "transport"));
     })();
   }, []);
+
+  const toggleService = (slug: string) =>
+    setSelectedServices((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
+    );
 
   const pickType = (type: "supplier" | "transport") => {
     setRegType(type);
@@ -183,20 +198,19 @@ export function AddBusiness({
                     );
                     return;
                   }
-                  if (
-                    regType === "transport" &&
-                    !servicesFTL &&
-                    !servicesLTL &&
-                    !servicesExpress &&
-                    !servicesThermo &&
-                    !servicesCrane &&
-                    !servicesSpecial
-                  ) {
+                  if (regType === "transport" && selectedServices.length === 0) {
                     setNotice(
-                      "⚠️ Valitse vähintään yksi palvelutyyppi kuljetusyrityksellesi!"
+                      "⚠️ Valitse vähintään yksi kuljetustyyppi kuljetusyrityksellesi!"
                     );
                     return;
                   }
+                  const cleanSocials = socials.map((s) => ({
+                    platform:
+                      s.platform === "muu"
+                        ? (s.custom || "muu").trim()
+                        : s.platform,
+                    url: s.url,
+                  }));
                   startTransition(async () => {
                     const payload =
                       regType === "supplier"
@@ -205,26 +219,21 @@ export function AddBusiness({
                             productsDesc,
                             categories: selectedCats,
                             website,
-                            socials,
+                            socials: cleanSocials,
                           }
                         : {
                             routeCountry: routeCountry.toLowerCase(),
                             routeDirection,
-                            services: [
-                              servicesFTL && "FTL (Täysikuorma)",
-                              servicesLTL && "LTL (Osakuorma)",
-                              servicesExpress && "Pikakuljetus",
-                              servicesThermo && "Lämpösäädelty",
-                              servicesCrane && "Nosturikuljetus",
-                              servicesSpecial && "Erikoiskuljetus",
-                            ].filter(Boolean),
-                            ftlPrice: ftlPrice || null,
-                            ltlPrice: ltlPrice || null,
-                            expressPrice: expressPrice || null,
-                            capacity,
-                            days,
+                            regNumber: regNumber.trim() || null,
+                            address: address.trim() || null,
+                            services: selectedServices,
+                            servicePrices: Object.fromEntries(
+                              selectedServices
+                                .map((s) => [s, Number(servicePrices[s])])
+                                .filter(([, v]) => Number.isFinite(v) && (v as number) > 0)
+                            ),
                             website,
-                            socials,
+                            socials: cleanSocials,
                           };
                     const fd = new FormData();
                     fd.set("regType", regType);
@@ -394,12 +403,29 @@ export function AddBusiness({
                             }}
                             className="h-9 cursor-pointer border border-slate-200 bg-white px-2 font-mono text-xs font-bold focus:outline-none"
                           >
-                            <option value="facebook">Facebook</option>
-                            <option value="insta">Instagram</option>
-                            <option value="x">X (Twitter)</option>
-                            <option value="threads">Threads</option>
-                            <option value="linkedin">LinkedIn</option>
+                            {SOCIAL_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
                           </select>
+                          {social.platform === "muu" && (
+                            <input
+                              type="text"
+                              required
+                              placeholder="Alustan nimi"
+                              value={social.custom ?? ""}
+                              onChange={(e) => {
+                                const updated = [...socials];
+                                updated[index] = {
+                                  ...updated[index],
+                                  custom: e.target.value,
+                                };
+                                setSocials(updated);
+                              }}
+                              className="h-9 w-28 border border-slate-200 bg-white px-2 text-xs focus:outline-none"
+                            />
+                          )}
                           <input
                             type="text"
                             required
@@ -502,6 +528,28 @@ export function AddBusiness({
                 {/* TRANSPORT FORM ONLY FIELDS */}
                 {regType === "transport" && (
                   <>
+                    <div className="space-y-1">
+                      <label className={labelCls}>Y-tunnus / Business reg. number *</label>
+                      <input
+                        type="text"
+                        required
+                        value={regNumber}
+                        onChange={(e) => setRegNumber(e.target.value)}
+                        className={inputCls}
+                        placeholder="Esim. 1234567-8 tai EE102345678"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className={labelCls}>Osoite / Address</label>
+                      <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className={inputCls}
+                        placeholder="Esim. Tehtaankatu 5, 00100 Helsinki"
+                      />
+                    </div>
+
                     <div className="space-y-4 rounded-lg border border-slate-200 bg-yellow-50/50 p-4 md:col-span-2">
                       <div className="space-y-1">
                         <label className={labelCls}>
@@ -599,111 +647,66 @@ export function AddBusiness({
                       </div>
                     </div>
 
-                    {/* Service Classes Checkboxes */}
-                    <div className="space-y-1 md:col-span-2">
+                    {/* Transport service types (from admin categories) */}
+                    <div className="space-y-2 md:col-span-2">
                       <label className={labelCls}>
-                        Tarjotut palveluluokat *
+                        Kuljetustyypit — valitse yksi tai useampi, lisää
+                        halutessasi alkaen-hinta *
                       </label>
-                      <div className="grid grid-cols-2 gap-3 border border-slate-200 bg-white p-3 md:grid-cols-3">
-                        {(
-                          [
-                            { label: "FTL", value: servicesFTL, set: setServicesFTL, amber: false },
-                            { label: "LTL", value: servicesLTL, set: setServicesLTL, amber: false },
-                            { label: "Express", value: servicesExpress, set: setServicesExpress, amber: false },
-                            { label: "Lämpösäädelty", value: servicesThermo, set: setServicesThermo, amber: true },
-                            { label: "Nosturikuljetus", value: servicesCrane, set: setServicesCrane, amber: true },
-                            { label: "Erikoiskuljetus", value: servicesSpecial, set: setServicesSpecial, amber: true },
-                          ] as const
-                        ).map((s) => (
-                          <label
-                            key={s.label}
-                            className={`flex cursor-pointer items-center gap-1.5 font-mono text-xs font-bold ${
-                              s.amber ? "text-amber-800" : ""
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={s.value}
-                              onChange={(e) => s.set(e.target.checked)}
-                              className={`h-4 w-4 border border-slate-200 ${
-                                s.amber ? "accent-amber-600" : ""
+                      <div className="grid grid-cols-1 gap-2 border border-slate-200 bg-white p-3 sm:grid-cols-2">
+                        {transportCats.map((cat) => {
+                          const active = selectedServices.includes(cat.slug);
+                          return (
+                            <div
+                              key={cat.slug}
+                              className={`flex items-center gap-2 border p-2 transition-colors ${
+                                active
+                                  ? "border-[#8B5CF6] bg-violet-50"
+                                  : "border-slate-200 bg-white"
                               }`}
-                            />
-                            <span>{s.label}</span>
-                          </label>
-                        ))}
+                            >
+                              <label className="flex flex-1 cursor-pointer select-none items-center gap-2 font-mono text-xs font-bold">
+                                <input
+                                  type="checkbox"
+                                  checked={active}
+                                  onChange={() => toggleService(cat.slug)}
+                                  className="h-4 w-4 border border-slate-200 accent-[#8B5CF6]"
+                                />
+                                <span>{categoryName(cat, locale)}</span>
+                              </label>
+                              {active && (
+                                <div className="flex shrink-0 items-center gap-1">
+                                  <span className="font-mono text-[9px] font-bold uppercase text-gray-400">
+                                    alkaen €
+                                  </span>
+                                  <input
+                                    type="number"
+                                    value={servicePrices[cat.slug] ?? ""}
+                                    onChange={(e) =>
+                                      setServicePrices((prev) => ({
+                                        ...prev,
+                                        [cat.slug]:
+                                          e.target.value === ""
+                                            ? ""
+                                            : Number(e.target.value),
+                                      }))
+                                    }
+                                    placeholder="—"
+                                    className="h-8 w-20 border border-slate-200 bg-white px-2 font-mono text-xs focus:outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {transportCats.length === 0 && (
+                          <p className="col-span-full py-2 text-center text-[10px] italic text-gray-400">
+                            Ladataan kuljetustyyppejä…
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Service Prices (Dynamic) */}
-                    {servicesFTL && (
-                      <div className="space-y-1">
-                        <label className={labelCls}>
-                          FTL Täyskuormahinta (€)
-                        </label>
-                        <input
-                          type="number"
-                          value={ftlPrice}
-                          onChange={(e) =>
-                            setFtlPrice(e.target.value === "" ? "" : Number(e.target.value))
-                          }
-                          className={`${inputCls} font-mono`}
-                          placeholder="Esim. 420"
-                        />
-                      </div>
-                    )}
-                    {servicesLTL && (
-                      <div className="space-y-1">
-                        <label className={labelCls}>LTL Alkaen Hinta (€)</label>
-                        <input
-                          type="number"
-                          value={ltlPrice}
-                          onChange={(e) =>
-                            setLtlPrice(e.target.value === "" ? "" : Number(e.target.value))
-                          }
-                          className={`${inputCls} font-mono`}
-                          placeholder="Esim. 210"
-                        />
-                      </div>
-                    )}
-                    {servicesExpress && (
-                      <div className="space-y-1">
-                        <label className={labelCls}>
-                          Express Pikarahtihinta (€)
-                        </label>
-                        <input
-                          type="number"
-                          value={expressPrice}
-                          onChange={(e) =>
-                            setExpressPrice(e.target.value === "" ? "" : Number(e.target.value))
-                          }
-                          className={`${inputCls} font-mono`}
-                          placeholder="Esim. 630"
-                        />
-                      </div>
-                    )}
-
-                    <div className="space-y-1">
-                      <label className={labelCls}>Kapasiteetti</label>
-                      <input
-                        type="text"
-                        value={capacity}
-                        onChange={(e) => setCapacity(e.target.value)}
-                        className={`${inputCls} font-mono`}
-                        placeholder="Esim. Erittäin korkea tai 24 t / 33 lavapaikkaa"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className={labelCls}>Toimitusaika</label>
-                      <input
-                        type="text"
-                        value={days}
-                        onChange={(e) => setDays(e.target.value)}
-                        className={`${inputCls} font-mono`}
-                        placeholder="Esim. 1–2 Business days tai 3–5 pv"
-                      />
-                    </div>
                   </>
                 )}
 
